@@ -1,0 +1,25 @@
+FROM node:18-alpine
+
+# Install dependencies needed for Prisma and Next.js
+RUN apk add --no-cache libc6-compat openssl
+
+# Set working directory
+WORKDIR /app
+
+# Copy package.json files
+COPY package*.json ./
+
+# Install dependencies with proper permissions
+RUN npm ci && \
+    mkdir -p /app/node_modules/.prisma && \
+    chmod -R 777 /app/node_modules && \
+    npx prisma generate
+
+# Copy prisma schema
+COPY prisma ./prisma/
+
+# Expose port
+EXPOSE 3000
+
+# Start development server
+CMD ["npm", "run", "dev"]

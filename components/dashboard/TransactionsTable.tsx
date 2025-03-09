@@ -11,16 +11,16 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Pencil, Trash2, Copy } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, Copy, X } from "lucide-react";
 import { useState } from "react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Command,
@@ -38,57 +38,79 @@ import {
 } from "@/components/ui/popover";
 import { ChevronsUpDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface TransactionsTableProps {
   transactions: Transaction[];
   onAddTransaction?: (transaction: Transaction) => void;
-  onUpdateTransaction?: (oldTransaction: Transaction, newTransaction: Transaction) => void;
+  onUpdateTransaction?: (
+    oldTransaction: Transaction,
+    newTransaction: Transaction
+  ) => void;
   onDeleteTransaction?: (transaction: Transaction) => void;
 }
 
-export function TransactionsTable({ transactions, onAddTransaction, onUpdateTransaction, onDeleteTransaction }: TransactionsTableProps) {
+// Available tags for who is responsible for the transaction
+const availableTags = ["Me", "Brother", "Dad"];
+
+export function TransactionsTable({
+  transactions,
+  onAddTransaction,
+  onUpdateTransaction,
+  onDeleteTransaction,
+}: TransactionsTableProps) {
   const [search, setSearch] = useState("");
   const [isAddingTransaction, setIsAddingTransaction] = useState(false);
   const [isEditingTransaction, setIsEditingTransaction] = useState(false);
   const [isDeletingTransaction, setIsDeletingTransaction] = useState(false);
-  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [transactionToDelete, setTransactionToDelete] =
+    useState<Transaction | null>(null);
+  const [editingTransaction, setEditingTransaction] =
+    useState<Transaction | null>(null);
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toISOString().split("T")[0],
     amount: 0,
     vendor: "",
     category: "",
-    transactionType: ""
+    transactionType: "",
+    tags: [],
   });
   const [openCategory, setOpenCategory] = useState(false);
   const [openType, setOpenType] = useState(false);
   const [openVendor, setOpenVendor] = useState(false);
+  const [openTags, setOpenTags] = useState(false);
   const [sortColumn, setSortColumn] = useState<keyof Transaction | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const [isNewCategoryDialogOpen, setIsNewCategoryDialogOpen] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState("");
 
   const [isNewTypeDialogOpen, setIsNewTypeDialogOpen] = useState(false);
-  const [newTypeName, setNewTypeName] = useState('');
+  const [newTypeName, setNewTypeName] = useState("");
 
   const [isNewVendorDialogOpen, setIsNewVendorDialogOpen] = useState(false);
-  const [newVendorName, setNewVendorName] = useState('');
+  const [newVendorName, setNewVendorName] = useState("");
 
   const handleSort = (column: keyof Transaction) => {
     if (sortColumn === column) {
       // If clicking the same column, toggle direction
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       // If clicking a new column, set it as the sort column with ascending order
       setSortColumn(column);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
-  const uniqueCategories = Array.from(new Set(transactions.map(t => t.category))).sort();
-  const uniqueTypes = Array.from(new Set(transactions.map(t => t.transactionType))).sort();
-  const uniqueVendors = Array.from(new Set(transactions.map(t => t.vendor))).sort();
+  const uniqueCategories = Array.from(
+    new Set(transactions.map((t) => t.category))
+  ).sort();
+  const uniqueTypes = Array.from(
+    new Set(transactions.map((t) => t.transactionType))
+  ).sort();
+  const uniqueVendors = Array.from(
+    new Set(transactions.map((t) => t.vendor))
+  ).sort();
 
   const handleAddTransaction = () => {
     if (
@@ -103,15 +125,17 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
         amount: parseFloat(newTransaction.amount as unknown as string),
         vendor: newTransaction.vendor,
         category: newTransaction.category,
-        transactionType: newTransaction.transactionType
+        transactionType: newTransaction.transactionType,
+        tags: newTransaction.tags || [],
       } as Transaction);
       setIsAddingTransaction(false);
       setNewTransaction({
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString().split("T")[0],
         amount: 0,
         vendor: "",
         category: "",
-        transactionType: ""
+        transactionType: "",
+        tags: [],
       });
     }
   };
@@ -130,16 +154,18 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
         amount: parseFloat(newTransaction.amount as unknown as string),
         vendor: newTransaction.vendor,
         category: newTransaction.category,
-        transactionType: newTransaction.transactionType
+        transactionType: newTransaction.transactionType,
+        tags: newTransaction.tags || [],
       } as Transaction);
       setIsEditingTransaction(false);
       setEditingTransaction(null);
       setNewTransaction({
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString().split("T")[0],
         amount: 0,
         vendor: "",
         category: "",
-        transactionType: ""
+        transactionType: "",
+        tags: [],
       });
     }
   };
@@ -159,7 +185,8 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
       amount: transaction.amount,
       vendor: transaction.vendor,
       category: transaction.category,
-      transactionType: transaction.transactionType
+      transactionType: transaction.transactionType,
+      tags: transaction.tags || [],
     });
     setIsEditingTransaction(true);
   };
@@ -167,19 +194,21 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
   const handleAddNewCategory = () => {
     if (newCategoryName.trim()) {
       // Add the new category to the list of unique categories
-      const updatedCategories = [...new Set([...uniqueCategories, newCategoryName.trim()])];
-      
+      const updatedCategories = [
+        ...new Set([...uniqueCategories, newCategoryName.trim()]),
+      ];
+
       // Update the categories
       // setCategories(updatedCategories);
-      
+
       // Set the new transaction's category to the newly added category
-      setNewTransaction(prev => ({ 
-        ...prev, 
-        category: newCategoryName.trim() 
+      setNewTransaction((prev) => ({
+        ...prev,
+        category: newCategoryName.trim(),
       }));
-      
+
       // Reset and close the dialog
-      setNewCategoryName('');
+      setNewCategoryName("");
       setIsNewCategoryDialogOpen(false);
     }
   };
@@ -188,38 +217,59 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
     if (newTypeName.trim()) {
       // Add the new type to the list of unique types
       const updatedTypes = [...new Set([...uniqueTypes, newTypeName.trim()])];
-      
+
       // Update the transaction types
       // setTransactionTypes(updatedTypes);
-      
+
       // Set the new transaction's type to the newly added type
-      setNewTransaction(prev => ({ 
-        ...prev, 
-        transactionType: newTypeName.trim() 
+      setNewTransaction((prev) => ({
+        ...prev,
+        transactionType: newTypeName.trim(),
       }));
-      
+
       // Reset and close the dialog
-      setNewTypeName('');
+      setNewTypeName("");
       setIsNewTypeDialogOpen(false);
     }
   };
 
   const handleAddNewVendor = (vendor: string) => {
     if (vendor && !uniqueVendors.includes(vendor)) {
-      setNewTransaction(prev => ({ ...prev, vendor }));
+      setNewTransaction((prev) => ({ ...prev, vendor }));
       setOpenVendor(false);
     }
   };
 
   const handleCopyTransaction = (transaction: Transaction) => {
     setNewTransaction({
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toISOString().split("T")[0],
       amount: transaction.amount,
       vendor: transaction.vendor,
       category: transaction.category,
-      transactionType: transaction.transactionType
+      transactionType: transaction.transactionType,
+      tags: transaction.tags || [],
     });
     setIsAddingTransaction(true);
+  };
+
+  // Toggle tag selection in the multiselect
+  const toggleTag = (tag: string) => {
+    setNewTransaction((prev) => {
+      const currentTags = prev.tags || [];
+      if (currentTags.includes(tag)) {
+        return { ...prev, tags: currentTags.filter((t) => t !== tag) };
+      } else {
+        return { ...prev, tags: [...currentTags, tag] };
+      }
+    });
+  };
+
+  // Remove a tag from the selected tags
+  const removeTag = (tag: string) => {
+    setNewTransaction((prev) => ({
+      ...prev,
+      tags: (prev.tags || []).filter((t) => t !== tag),
+    }));
   };
 
   const filteredTransactions = transactions.filter((t) => {
@@ -239,16 +289,14 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
     const aValue = a[sortColumn];
     const bValue = b[sortColumn];
 
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortDirection === 'asc' 
+    if (typeof aValue === "string" && typeof bValue === "string") {
+      return sortDirection === "asc"
         ? aValue.localeCompare(bValue)
         : bValue.localeCompare(aValue);
     }
 
-    if (typeof aValue === 'number' && typeof bValue === 'number') {
-      return sortDirection === 'asc' 
-        ? aValue - bValue
-        : bValue - aValue;
+    if (typeof aValue === "number" && typeof bValue === "number") {
+      return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
     }
 
     return 0;
@@ -263,7 +311,9 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
         />
-        <Dialog open={isAddingTransaction} onOpenChange={setIsAddingTransaction}>
+        <Dialog
+          open={isAddingTransaction}
+          onOpenChange={setIsAddingTransaction}>
           <DialogTrigger asChild>
             <Button size="sm">
               <PlusCircle className="h-4 w-4 mr-2" />
@@ -279,29 +329,45 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="date" className="text-right text-sm">Date</label>
+                <label htmlFor="date" className="text-right text-sm">
+                  Date
+                </label>
                 <Input
                   id="date"
                   type="date"
                   value={newTransaction.date}
-                  onChange={(e) => setNewTransaction(prev => ({ ...prev, date: e.target.value }))}
+                  onChange={(e) =>
+                    setNewTransaction((prev) => ({
+                      ...prev,
+                      date: e.target.value,
+                    }))
+                  }
                   className="col-span-3"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="amount" className="text-right text-sm">Amount</label>
+                <label htmlFor="amount" className="text-right text-sm">
+                  Amount
+                </label>
                 <Input
                   id="amount"
                   type="number"
                   step="0.01"
                   placeholder="0.00"
                   value={newTransaction.amount}
-                  onChange={(e) => setNewTransaction(prev => ({ ...prev, amount: parseFloat(e.target.value) }))}
+                  onChange={(e) =>
+                    setNewTransaction((prev) => ({
+                      ...prev,
+                      amount: parseFloat(e.target.value),
+                    }))
+                  }
                   className="col-span-3"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="vendor" className="text-right text-sm">Vendor</label>
+                <label htmlFor="vendor" className="text-right text-sm">
+                  Vendor
+                </label>
                 <div className="col-span-3">
                   <Popover open={openVendor} onOpenChange={setOpenVendor}>
                     <PopoverTrigger asChild>
@@ -311,8 +377,7 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                         role="combobox"
                         aria-expanded={openVendor}
                         aria-label="Select vendor"
-                        className="w-[300px] justify-between"
-                      >
+                        className="w-[300px] justify-between">
                         {newTransaction.vendor || "Select vendor..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -323,7 +388,8 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                         <CommandList className="overflow-y-auto max-h-[200px]">
                           <CommandEmpty>
                             <div className="p-2 text-sm">
-                              Press enter to add &quot;{newTransaction.vendor}&quot; as a new vendor
+                              Press enter to add &quot;{newTransaction.vendor}
+                              &quot; as a new vendor
                             </div>
                           </CommandEmpty>
                           <CommandGroup heading="Vendors">
@@ -332,14 +398,18 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                                 key={vendor}
                                 value={vendor}
                                 onSelect={() => {
-                                  setNewTransaction(prev => ({ ...prev, vendor }));
+                                  setNewTransaction((prev) => ({
+                                    ...prev,
+                                    vendor,
+                                  }));
                                   setOpenVendor(false);
-                                }}
-                              >
+                                }}>
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    newTransaction.vendor === vendor ? "opacity-100" : "opacity-0"
+                                    newTransaction.vendor === vendor
+                                      ? "opacity-100"
+                                      : "opacity-0"
                                   )}
                                 />
                                 {vendor}
@@ -352,8 +422,7 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                           <CommandItem
                             onSelect={() => {
                               setIsNewVendorDialogOpen(true);
-                            }}
-                          >
+                            }}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Add new vendor
                           </CommandItem>
@@ -364,7 +433,9 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="category" className="text-right text-sm">Category</label>
+                <label htmlFor="category" className="text-right text-sm">
+                  Category
+                </label>
                 <div className="col-span-3">
                   <Popover open={openCategory} onOpenChange={setOpenCategory}>
                     <PopoverTrigger asChild>
@@ -374,8 +445,7 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                         role="combobox"
                         aria-expanded={openCategory}
                         aria-label="Select category"
-                        className="w-[300px] justify-between"
-                      >
+                        className="w-[300px] justify-between">
                         {newTransaction.category || "Select category..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -386,7 +456,8 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                         <CommandList className="overflow-y-auto max-h-[200px]">
                           <CommandEmpty>
                             <div className="p-2 text-sm">
-                              Press enter to add &quot;{newTransaction.category}&quot; as a new category
+                              Press enter to add &quot;{newTransaction.category}
+                              &quot; as a new category
                             </div>
                           </CommandEmpty>
                           <CommandGroup heading="Categories">
@@ -395,14 +466,18 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                                 key={category}
                                 value={category}
                                 onSelect={() => {
-                                  setNewTransaction(prev => ({ ...prev, category }));
+                                  setNewTransaction((prev) => ({
+                                    ...prev,
+                                    category,
+                                  }));
                                   setOpenCategory(false);
-                                }}
-                              >
+                                }}>
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    newTransaction.category === category ? "opacity-100" : "opacity-0"
+                                    newTransaction.category === category
+                                      ? "opacity-100"
+                                      : "opacity-0"
                                   )}
                                 />
                                 {category}
@@ -415,8 +490,7 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                           <CommandItem
                             onSelect={() => {
                               setIsNewCategoryDialogOpen(true);
-                            }}
-                          >
+                            }}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Add new category
                           </CommandItem>
@@ -427,7 +501,9 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="type" className="text-right text-sm">Type</label>
+                <label htmlFor="type" className="text-right text-sm">
+                  Type
+                </label>
                 <div className="col-span-3">
                   <Popover open={openType} onOpenChange={setOpenType}>
                     <PopoverTrigger asChild>
@@ -437,8 +513,7 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                         role="combobox"
                         aria-expanded={openType}
                         aria-label="Select type"
-                        className="w-[300px] justify-between"
-                      >
+                        className="w-[300px] justify-between">
                         {newTransaction.transactionType || "Select type..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -449,7 +524,9 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                         <CommandList className="overflow-y-auto max-h-[200px]">
                           <CommandEmpty>
                             <div className="p-2 text-sm">
-                              Press enter to add &quot;{newTransaction.transactionType}&quot; as a new type
+                              Press enter to add &quot;
+                              {newTransaction.transactionType}&quot; as a new
+                              type
                             </div>
                           </CommandEmpty>
                           <CommandGroup heading="Types">
@@ -458,14 +535,18 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                                 key={type}
                                 value={type}
                                 onSelect={() => {
-                                  setNewTransaction(prev => ({ ...prev, transactionType: type }));
+                                  setNewTransaction((prev) => ({
+                                    ...prev,
+                                    transactionType: type,
+                                  }));
                                   setOpenType(false);
-                                }}
-                              >
+                                }}>
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    newTransaction.transactionType === type ? "opacity-100" : "opacity-0"
+                                    newTransaction.transactionType === type
+                                      ? "opacity-100"
+                                      : "opacity-0"
                                   )}
                                 />
                                 {type}
@@ -478,8 +559,7 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                           <CommandItem
                             onSelect={() => {
                               setIsNewTypeDialogOpen(true);
-                            }}
-                          >
+                            }}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Add new type
                           </CommandItem>
@@ -489,9 +569,80 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                   </Popover>
                 </div>
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="tags" className="text-right text-sm">
+                  Tags
+                </label>
+                <div className="col-span-3">
+                  <Popover open={openTags} onOpenChange={setOpenTags}>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {(newTransaction.tags || []).map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant="secondary"
+                          className="flex items-center gap-1">
+                          {tag}
+                          <X
+                            className="h-3 w-3 cursor-pointer"
+                            onClick={() => removeTag(tag)}
+                          />
+                        </Badge>
+                      ))}
+                    </div>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="tags"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openTags}
+                        aria-label="Select tags"
+                        className="w-[300px] justify-between">
+                        Select responsible person(s)
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search tags..." />
+                        <CommandList>
+                          <CommandEmpty>No tags found</CommandEmpty>
+                          <CommandGroup>
+                            {availableTags.map((tag) => {
+                              const isSelected = (
+                                newTransaction.tags || []
+                              ).includes(tag);
+                              return (
+                                <CommandItem
+                                  key={tag}
+                                  onSelect={() => toggleTag(tag)}
+                                  className="flex items-center">
+                                  <div
+                                    className={cn(
+                                      "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                                      isSelected
+                                        ? "bg-primary border-primary text-primary-foreground"
+                                        : "opacity-50 border-input"
+                                    )}>
+                                    {isSelected && (
+                                      <Check className="h-3 w-3" />
+                                    )}
+                                  </div>
+                                  {tag}
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddingTransaction(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsAddingTransaction(false)}>
                 Cancel
               </Button>
               <Button onClick={handleAddTransaction}>Add Transaction</Button>
@@ -499,7 +650,9 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isNewCategoryDialogOpen} onOpenChange={setIsNewCategoryDialogOpen}>
+        <Dialog
+          open={isNewCategoryDialogOpen}
+          onOpenChange={setIsNewCategoryDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Category</DialogTitle>
@@ -509,7 +662,11 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="new-category-name" className="text-right text-sm">Category Name</label>
+                <label
+                  htmlFor="new-category-name"
+                  className="text-right text-sm">
+                  Category Name
+                </label>
                 <Input
                   id="new-category-name"
                   type="text"
@@ -520,7 +677,9 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsNewCategoryDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsNewCategoryDialogOpen(false)}>
                 Cancel
               </Button>
               <Button onClick={handleAddNewCategory}>Add Category</Button>
@@ -528,7 +687,9 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isNewTypeDialogOpen} onOpenChange={setIsNewTypeDialogOpen}>
+        <Dialog
+          open={isNewTypeDialogOpen}
+          onOpenChange={setIsNewTypeDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Type</DialogTitle>
@@ -538,7 +699,9 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="new-type-name" className="text-right text-sm">Type Name</label>
+                <label htmlFor="new-type-name" className="text-right text-sm">
+                  Type Name
+                </label>
                 <Input
                   id="new-type-name"
                   type="text"
@@ -549,7 +712,9 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsNewTypeDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsNewTypeDialogOpen(false)}>
                 Cancel
               </Button>
               <Button onClick={handleAddNewType}>Add Type</Button>
@@ -557,7 +722,9 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isNewVendorDialogOpen} onOpenChange={setIsNewVendorDialogOpen}>
+        <Dialog
+          open={isNewVendorDialogOpen}
+          onOpenChange={setIsNewVendorDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Vendor</DialogTitle>
@@ -567,7 +734,9 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="new-vendor-name" className="text-right text-sm">Vendor Name</label>
+                <label htmlFor="new-vendor-name" className="text-right text-sm">
+                  Vendor Name
+                </label>
                 <Input
                   id="new-vendor-name"
                   type="text"
@@ -578,50 +747,60 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsNewVendorDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsNewVendorDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => handleAddNewVendor(newVendorName)}>Add Vendor</Button>
+              <Button onClick={() => handleAddNewVendor(newVendorName)}>
+                Add Vendor
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
       </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead 
+              <TableHead
                 className="cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('date')}
-              >
-                Date {sortColumn === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
+                onClick={() => handleSort("date")}>
+                Date{" "}
+                {sortColumn === "date" && (sortDirection === "asc" ? "↑" : "↓")}
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('vendor')}
-              >
-                Vendor {sortColumn === 'vendor' && (sortDirection === 'asc' ? '↑' : '↓')}
+                onClick={() => handleSort("vendor")}>
+                Vendor{" "}
+                {sortColumn === "vendor" &&
+                  (sortDirection === "asc" ? "↑" : "↓")}
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('amount')}
-              >
-                Amount {sortColumn === 'amount' && (sortDirection === 'asc' ? '↑' : '↓')}
+                onClick={() => handleSort("amount")}>
+                Amount{" "}
+                {sortColumn === "amount" &&
+                  (sortDirection === "asc" ? "↑" : "↓")}
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('category')}
-              >
-                Category {sortColumn === 'category' && (sortDirection === 'asc' ? '↑' : '↓')}
+                onClick={() => handleSort("category")}>
+                Category{" "}
+                {sortColumn === "category" &&
+                  (sortDirection === "asc" ? "↑" : "↓")}
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('transactionType')}
-              >
-                Type {sortColumn === 'transactionType' && (sortDirection === 'asc' ? '↑' : '↓')}
+                onClick={() => handleSort("transactionType")}>
+                Type{" "}
+                {sortColumn === "transactionType" &&
+                  (sortDirection === "asc" ? "↑" : "↓")}
               </TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead>Tags</TableHead>
+              <TableHead className="flex justify-end px-6 items-center">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -632,7 +811,16 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                 <TableCell>${transaction.amount.toFixed(2)}</TableCell>
                 <TableCell>{transaction.category}</TableCell>
                 <TableCell>{transaction.transactionType}</TableCell>
-                <TableCell className="text-right">
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {transaction.tags?.map((tag) => (
+                      <Badge key={tag} variant="secondary">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell className="flex items-center justify-end gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -643,22 +831,21 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                         amount: transaction.amount,
                         vendor: transaction.vendor,
                         category: transaction.category,
-                        transactionType: transaction.transactionType
+                        transactionType: transaction.transactionType,
+                        tags: transaction.tags || [],
                       });
                       setIsEditingTransaction(true);
                     }}
-                    className="h-8 w-8 p-0"
-                  >
+                    className="h-8 w-8 p-0">
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button
+                  {/* <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => handleCopyTransaction(transaction)}
-                    className="h-8 w-8 p-0"
-                  >
+                    className="h-8 w-8 p-0">
                     <Copy className="h-4 w-4" />
-                  </Button>
+                  </Button> */}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -666,8 +853,7 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                       setTransactionToDelete(transaction);
                       setIsDeletingTransaction(true);
                     }}
-                    className="h-8 w-8 p-0 text-destructive"
-                  >
+                    className="h-8 w-8 p-0 text-destructive">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </TableCell>
@@ -677,7 +863,9 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
         </Table>
       </div>
 
-      <Dialog open={isEditingTransaction} onOpenChange={setIsEditingTransaction}>
+      <Dialog
+        open={isEditingTransaction}
+        onOpenChange={setIsEditingTransaction}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Transaction</DialogTitle>
@@ -687,29 +875,45 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="date" className="text-right text-sm">Date</label>
+              <label htmlFor="date" className="text-right text-sm">
+                Date
+              </label>
               <Input
                 id="date"
                 type="date"
                 value={newTransaction.date}
-                onChange={(e) => setNewTransaction(prev => ({ ...prev, date: e.target.value }))}
+                onChange={(e) =>
+                  setNewTransaction((prev) => ({
+                    ...prev,
+                    date: e.target.value,
+                  }))
+                }
                 className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="amount" className="text-right text-sm">Amount</label>
+              <label htmlFor="amount" className="text-right text-sm">
+                Amount
+              </label>
               <Input
                 id="amount"
                 type="number"
                 step="0.01"
                 placeholder="0.00"
                 value={newTransaction.amount}
-                onChange={(e) => setNewTransaction(prev => ({ ...prev, amount: parseFloat(e.target.value) }))}
+                onChange={(e) =>
+                  setNewTransaction((prev) => ({
+                    ...prev,
+                    amount: parseFloat(e.target.value),
+                  }))
+                }
                 className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="vendor" className="text-right text-sm">Vendor</label>
+              <label htmlFor="vendor" className="text-right text-sm">
+                Vendor
+              </label>
               <div className="col-span-3">
                 <Popover open={openVendor} onOpenChange={setOpenVendor}>
                   <PopoverTrigger asChild>
@@ -719,8 +923,7 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                       role="combobox"
                       aria-expanded={openVendor}
                       aria-label="Select vendor"
-                      className="w-[300px] justify-between"
-                    >
+                      className="w-[300px] justify-between">
                       {newTransaction.vendor || "Select vendor..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -731,7 +934,8 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                       <CommandList className="overflow-y-auto max-h-[200px]">
                         <CommandEmpty>
                           <div className="p-2 text-sm">
-                            Press enter to add &quot;{newTransaction.vendor}&quot; as a new vendor
+                            Press enter to add &quot;{newTransaction.vendor}
+                            &quot; as a new vendor
                           </div>
                         </CommandEmpty>
                         <CommandGroup heading="Vendors">
@@ -740,14 +944,18 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                               key={vendor}
                               value={vendor}
                               onSelect={() => {
-                                setNewTransaction(prev => ({ ...prev, vendor }));
+                                setNewTransaction((prev) => ({
+                                  ...prev,
+                                  vendor,
+                                }));
                                 setOpenVendor(false);
-                              }}
-                            >
+                              }}>
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
-                                  newTransaction.vendor === vendor ? "opacity-100" : "opacity-0"
+                                  newTransaction.vendor === vendor
+                                    ? "opacity-100"
+                                    : "opacity-0"
                                 )}
                               />
                               {vendor}
@@ -760,8 +968,7 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                         <CommandItem
                           onSelect={() => {
                             setIsNewVendorDialogOpen(true);
-                          }}
-                        >
+                          }}>
                           <PlusCircle className="mr-2 h-4 w-4" />
                           Add new vendor
                         </CommandItem>
@@ -772,7 +979,9 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
               </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="category" className="text-right text-sm">Category</label>
+              <label htmlFor="category" className="text-right text-sm">
+                Category
+              </label>
               <div className="col-span-3">
                 <Popover open={openCategory} onOpenChange={setOpenCategory}>
                   <PopoverTrigger asChild>
@@ -782,8 +991,7 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                       role="combobox"
                       aria-expanded={openCategory}
                       aria-label="Select category"
-                      className="w-[300px] justify-between"
-                    >
+                      className="w-[300px] justify-between">
                       {newTransaction.category || "Select category..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -794,7 +1002,8 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                       <CommandList className="overflow-y-auto max-h-[200px]">
                         <CommandEmpty>
                           <div className="p-2 text-sm">
-                            Press enter to add &quot;{newTransaction.category}&quot; as a new category
+                            Press enter to add &quot;{newTransaction.category}
+                            &quot; as a new category
                           </div>
                         </CommandEmpty>
                         <CommandGroup heading="Categories">
@@ -803,14 +1012,18 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                               key={category}
                               value={category}
                               onSelect={() => {
-                                setNewTransaction(prev => ({ ...prev, category }));
+                                setNewTransaction((prev) => ({
+                                  ...prev,
+                                  category,
+                                }));
                                 setOpenCategory(false);
-                              }}
-                            >
+                              }}>
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
-                                  newTransaction.category === category ? "opacity-100" : "opacity-0"
+                                  newTransaction.category === category
+                                    ? "opacity-100"
+                                    : "opacity-0"
                                 )}
                               />
                               {category}
@@ -823,8 +1036,7 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                         <CommandItem
                           onSelect={() => {
                             setIsNewCategoryDialogOpen(true);
-                          }}
-                        >
+                          }}>
                           <PlusCircle className="mr-2 h-4 w-4" />
                           Add new category
                         </CommandItem>
@@ -835,7 +1047,9 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
               </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="type" className="text-right text-sm">Type</label>
+              <label htmlFor="type" className="text-right text-sm">
+                Type
+              </label>
               <div className="col-span-3">
                 <Popover open={openType} onOpenChange={setOpenType}>
                   <PopoverTrigger asChild>
@@ -845,8 +1059,7 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                       role="combobox"
                       aria-expanded={openType}
                       aria-label="Select type"
-                      className="w-[300px] justify-between"
-                    >
+                      className="w-[300px] justify-between">
                       {newTransaction.transactionType || "Select type..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -857,7 +1070,8 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                       <CommandList className="overflow-y-auto max-h-[200px]">
                         <CommandEmpty>
                           <div className="p-2 text-sm">
-                            Press enter to add &quot;{newTransaction.transactionType}&quot; as a new type
+                            Press enter to add &quot;
+                            {newTransaction.transactionType}&quot; as a new type
                           </div>
                         </CommandEmpty>
                         <CommandGroup heading="Types">
@@ -866,14 +1080,18 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                               key={type}
                               value={type}
                               onSelect={() => {
-                                setNewTransaction(prev => ({ ...prev, transactionType: type }));
+                                setNewTransaction((prev) => ({
+                                  ...prev,
+                                  transactionType: type,
+                                }));
                                 setOpenType(false);
-                              }}
-                            >
+                              }}>
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
-                                  newTransaction.transactionType === type ? "opacity-100" : "opacity-0"
+                                  newTransaction.transactionType === type
+                                    ? "opacity-100"
+                                    : "opacity-0"
                                 )}
                               />
                               {type}
@@ -886,8 +1104,7 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                         <CommandItem
                           onSelect={() => {
                             setIsNewTypeDialogOpen(true);
-                          }}
-                        >
+                          }}>
                           <PlusCircle className="mr-2 h-4 w-4" />
                           Add new type
                         </CommandItem>
@@ -897,36 +1114,113 @@ export function TransactionsTable({ transactions, onAddTransaction, onUpdateTran
                 </Popover>
               </div>
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="edit-tags" className="text-right text-sm">
+                Tags
+              </label>
+              <div className="col-span-3">
+                <Popover open={openTags} onOpenChange={setOpenTags}>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {(newTransaction.tags || []).map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="flex items-center gap-1">
+                        {tag}
+                        <X
+                          className="h-3 w-3 cursor-pointer"
+                          onClick={() => removeTag(tag)}
+                        />
+                      </Badge>
+                    ))}
+                  </div>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="edit-tags"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openTags}
+                      aria-label="Select tags"
+                      className="w-[300px] justify-between">
+                      Select responsible person(s)
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search tags..." />
+                      <CommandList>
+                        <CommandEmpty>No tags found</CommandEmpty>
+                        <CommandGroup>
+                          {availableTags.map((tag) => {
+                            const isSelected = (
+                              newTransaction.tags || []
+                            ).includes(tag);
+                            return (
+                              <CommandItem
+                                key={tag}
+                                onSelect={() => toggleTag(tag)}
+                                className="flex items-center">
+                                <div
+                                  className={cn(
+                                    "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                                    isSelected
+                                      ? "bg-primary border-primary text-primary-foreground"
+                                      : "opacity-50 border-input"
+                                  )}>
+                                  {isSelected && <Check className="h-3 w-3" />}
+                                </div>
+                                {tag}
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsEditingTransaction(false);
-              setEditingTransaction(null);
-              setNewTransaction({
-                date: new Date().toISOString().split('T')[0],
-                amount: 0,
-                vendor: "",
-                category: "",
-                transactionType: ""
-              });
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditingTransaction(false);
+                setEditingTransaction(null);
+                setNewTransaction({
+                  date: new Date().toISOString().split("T")[0],
+                  amount: 0,
+                  vendor: "",
+                  category: "",
+                  transactionType: "",
+                  tags: [],
+                });
+              }}>
               Cancel
             </Button>
-            <Button onClick={handleUpdateTransaction}>Update Transaction</Button>
+            <Button onClick={handleUpdateTransaction}>
+              Update Transaction
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isDeletingTransaction} onOpenChange={setIsDeletingTransaction}>
+      <Dialog
+        open={isDeletingTransaction}
+        onOpenChange={setIsDeletingTransaction}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Transaction</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this transaction? This action cannot be undone.
+              Are you sure you want to delete this transaction? This action
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeletingTransaction(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeletingTransaction(false)}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteConfirm}>

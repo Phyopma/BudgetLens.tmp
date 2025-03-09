@@ -4,6 +4,7 @@ export interface Transaction {
   amount: number;
   category: string;
   transactionType: string;
+  tags: string[];
 }
 
 export interface CategoryTotal {
@@ -17,4 +18,4 @@ export interface MonthlySpending {
   total: number;
 }
 
-export type MetricType = 'expenses' | 'income' | 'savings';
+export type MetricType = "expenses" | "income" | "savings";

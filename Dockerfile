@@ -1,56 +1,32 @@
-# Base image for building
-FROM node:18-alpine AS base
+FROM node:18-alpine
 
-# Install dependencies only when needed
-FROM base AS deps
-RUN apk add --no-cache libc6-compat
+# Install dependencies needed for Prisma and Next.js
+RUN apk add --no-cache libc6-compat openssl
+
 WORKDIR /app
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
 
 # Install dependencies
-COPY package.json package-lock.json* ./
 RUN npm ci
 
-# Build stage
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Copy the rest of the app
 COPY . .
+
+# Set permissions for the prisma directory
+RUN mkdir -p /app/node_modules/.prisma && \
+    chmod -R 777 /app/node_modules/.prisma && \
+    chmod -R 777 /app/node_modules/@prisma
 
 # Generate Prisma client
 RUN npx prisma generate
 
-# Build the application
+# Build the Next.js app
 RUN npm run build
 
-# Production image
-FROM base AS runner
-WORKDIR /app
-
-ENV NODE_ENV production
-
-# Create non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-# Copy build artifacts
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/prisma ./prisma
-
-# Copy entrypoint script
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
-
-# Set user and expose port
-USER nextjs
+# Expose the port
 EXPOSE 3000
 
-# Set environment
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
-
-# Entrypoint
-ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["node", "server.js"]
+# Start the app
+CMD ["npm", "run", "dev"]

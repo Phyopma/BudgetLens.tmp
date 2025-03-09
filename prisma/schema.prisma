@@ -20,6 +20,7 @@ model Transaction {
   amount          Float?   @default(0.0)
   category        String
   transactionType String
+  tags            String[] @default([])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -27,4 +28,5 @@ model Transaction {
   @@index([category])
   @@index([vendor])
   @@index([transactionType])
+  @@index([tags])
 }
