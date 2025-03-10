@@ -24,10 +24,10 @@ interface CategoryMetrics {
 
 export function CategoryPieChart({ categoryTotals, transactions }: CategoryPieChartProps) {
   const [chartSettings, setChartSettings] = useState<ChartSettingsProps["settings"]>({
-    chartType: 'pie',
+    chartType: 'area',
     valueDisplay: 'value',
     chartHeight: 300,
-    legendPosition: 'right',
+    legendPosition: 'none',
     labelPosition: 'outside',
     animationDuration: 400,
   });
@@ -132,12 +132,12 @@ export function CategoryPieChart({ categoryTotals, transactions }: CategoryPieCh
             {(['expenses', 'income'] as MetricType[]).map((metric, index) => (
               <div key={metric} className="flex items-center space-x-2">
                 <Checkbox
-                  id={`metric-${metric}`}
+                  id={`category-metric-${metric}`}
                   checked={selectedMetrics.includes(metric)}
                   onCheckedChange={() => handleMetricToggle(metric)}
                 />
                 <Label
-                  htmlFor={`metric-${metric}`}
+                  htmlFor={`category-metric-${metric}`}
                   className="text-sm capitalize"
                   style={{ color: metricColors[metric] }}
                 >

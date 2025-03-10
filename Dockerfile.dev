@@ -9,14 +9,14 @@ WORKDIR /app
 # Copy package.json files
 COPY package*.json ./
 
+# Copy prisma schema first
+COPY prisma ./prisma/
+
 # Install dependencies with proper permissions
-RUN npm ci && \
+RUN npm ci --legacy-peer-deps && \
     mkdir -p /app/node_modules/.prisma && \
     chmod -R 777 /app/node_modules && \
     npx prisma generate
-
-# Copy prisma schema
-COPY prisma ./prisma/
 
 # Expose port
 EXPOSE 3000

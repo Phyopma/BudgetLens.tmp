@@ -48,11 +48,10 @@ export const SAMPLE_DATA = `date,vendor,amount,category,transactionType
 
 export const INITIAL_LAYOUT = [
   'csv-upload',
+  "account-balances",
   "filter",
   "metrics",
   "total-metrics",
-  "monthly-trends",
-  "monthly",
   "categories",
   "transactions",
   "budget-goals"

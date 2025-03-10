@@ -21,6 +21,7 @@ interface FilterBarProps {
   onVendorFilter: (includes: string[], excludes: string[]) => void;
   onTransactionTypeFilter: (includes: string[], excludes: string[]) => void;
   onDateFilter: (startDate: Date | undefined, endDate: Date | undefined) => void;
+  onTagFilter: (includes: string[], excludes: string[]) => void;
 }
 
 interface SelectionStates {
@@ -32,11 +33,13 @@ export function FilterBar({
   onCategoryFilter, 
   onVendorFilter, 
   onTransactionTypeFilter,
-  onDateFilter 
+  onDateFilter,
+  onTagFilter 
 }: FilterBarProps) {
   const [categoryStates, setCategoryStates] = useState<SelectionStates>({});
   const [vendorStates, setVendorStates] = useState<SelectionStates>({});
   const [typeStates, setTypeStates] = useState<SelectionStates>({});
+  const [tagStates, setTagStates] = useState<SelectionStates>({});
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [dateRange, setDateRange] = useState<{ min: Date; max: Date }>(() => {
@@ -67,6 +70,15 @@ export function FilterBar({
   const categories = Array.from(new Set(transactions.map(t => t.category)));
   const vendors = Array.from(new Set(transactions.map(t => t.vendor)));
   const transactionTypes = Array.from(new Set(transactions.map(t => t.transactionType)));
+  
+  // Extract all unique tags from transactions
+  const allTags = Array.from(
+    new Set(
+      transactions
+        .flatMap(t => t.tags || [])
+        .filter(tag => tag) // Filter out empty tags
+    )
+  ).sort();
 
   const handleStartDateSelect = (date: Date | undefined) => {
     setStartDate(date);
@@ -129,7 +141,7 @@ export function FilterBar({
   };
 
   return (
-    <div className="flex gap-4 mb-6">
+    <div className="flex gap-4 mb-6 flex-wrap">
       {/* Date Range Filter */}
       <div className="flex gap-2">
         <Popover>
@@ -275,6 +287,35 @@ export function FilterBar({
           ))}
         </SelectContent>
       </Select>
+
+      {/* Tags Filter */}
+      {allTags.length > 0 && (
+        <Select value="tags" onValueChange={() => {}}>
+          <SelectTrigger className="w-[180px]" aria-label="Filter by Tags">
+            <SelectValue>Filter by Tags</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem
+              value="__all__"
+              selectionState={isAllSelected(tagStates, allTags) ? 1 : 0}
+              onMultiStateChange={() => toggleAll(tagStates, setTagStates, allTags, onTagFilter)}
+            >
+              Select All
+            </SelectItem>
+            <SelectSeparator />
+            {allTags.map(tag => (
+              <SelectItem
+                key={tag}
+                value={tag}
+                selectionState={tagStates[tag] || 0}
+                onMultiStateChange={handleStateChange(tagStates, setTagStates, onTagFilter)}
+              >
+                {tag}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
     </div>
   );
 }

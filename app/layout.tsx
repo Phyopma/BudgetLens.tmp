@@ -1,15 +1,14 @@
+'use client';
+
 import './globals.css';
-import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { AuthProvider } from "@/contexts/AuthContext"
+import { SessionProvider } from "next-auth/react"
+import { LogoutButton } from "@/components/ui/LogoutButton"
 
 const inter = Inter({ subsets: ['latin'] });
-
-export const metadata: Metadata = {
-  title: 'BudgetLens',
-  description: 'Your personal financial tracking dashboard',
-};
 
 export default function RootLayout({
   children,
@@ -19,17 +18,22 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} min-h-screen bg-background`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <div className="absolute right-4 top-4">
-            <ThemeToggle />
-          </div>
-          {children}
-        </ThemeProvider>
+        <SessionProvider>
+          <AuthProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <div className="absolute right-4 top-4">
+                <ThemeToggle />
+              </div>
+              <LogoutButton />
+              {children}
+            </ThemeProvider>
+          </AuthProvider>
+        </SessionProvider>
       </body>
     </html>
   );

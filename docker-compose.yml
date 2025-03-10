@@ -14,10 +14,10 @@ services:
     env_file:
       - .env
     volumes:
-      - ./:/app:delegated
       - app_node_modules:/app/node_modules
       - app_next_cache:/app/.next
       - app_prisma:/app/node_modules/.prisma
+      - ./:/app:delegated
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: npm run dev

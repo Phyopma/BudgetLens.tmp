@@ -17,6 +17,7 @@ import { MonthlyTrendsChart } from "@/components/dashboard/MonthlyTrendsChart";
 import { DynamicCharts } from "@/components/dashboard/DynamicCharts";
 import { DashboardCustomizer } from "@/components/dashboard/DashboardCustomizer";
 import BudgetGoals from "@/components/dashboard/BudgetGoals";
+import { AccountBalanceCards } from "@/components/dashboard/AccountBalanceCards";
 import { SAMPLE_DATA, INITIAL_LAYOUT, RESET_FILTER_VALUE, INITIAL_BUDGET_GOALS } from "@/lib/utils/constants";
 import { useTransactions } from "@/hooks/useTransactions";
 
@@ -40,6 +41,7 @@ export default function Home() {
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [vendorFilter, setVendorFilter] = useState<string[]>([]);
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<string[]>([]);
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [budgetGoals, setBudgetGoals] = useState<{ categoryId: string; amount: number; }[]>(INITIAL_BUDGET_GOALS);
@@ -66,6 +68,9 @@ export default function Home() {
     if (transactionTypeFilter.length > 0) {
       filtered = filtered.filter(t => transactionTypeFilter.includes(t.transactionType));
     }
+    if (tagFilter.length > 0) {
+      filtered = filtered.filter(t => t.tags && t.tags.some(tag => tagFilter.includes(tag)));
+    }
     if (startDate || endDate) {
       filtered = filtered.filter(t => {
         const transactionDate = new Date(t.date);
@@ -81,7 +86,7 @@ export default function Home() {
     }
 
     setFilteredTransactions(filtered);
-  }, [transactions, categoryFilter, vendorFilter, transactionTypeFilter, startDate, endDate]);
+  }, [transactions, categoryFilter, vendorFilter, transactionTypeFilter, tagFilter, startDate, endDate]);
 
   // Calculate totals whenever filtered transactions change
   useEffect(() => {
@@ -112,6 +117,7 @@ export default function Home() {
     setCategoryFilter([]);
     setVendorFilter([]);
     setTransactionTypeFilter([]);
+    setTagFilter([]);
   };
 
   if (loading) {
@@ -147,6 +153,7 @@ export default function Home() {
   const handleCategoryFilter = (includes: string[], excludes: string[]) => setCategoryFilter(includes);
   const handleVendorFilter = (includes: string[], excludes: string[]) => setVendorFilter(includes);
   const handleTransactionTypeFilter = (includes: string[], excludes: string[]) => setTransactionTypeFilter(includes);
+  const handleTagFilter = (includes: string[], excludes: string[]) => setTagFilter(includes);
 
   const handleEdit = (id: string) => {
     console.log(`Edit card with id: ${id}`);
@@ -159,6 +166,8 @@ export default function Home() {
 
   const renderComponent = (type: string) => {
     switch (type) {
+      case 'account-balances':
+        return <AccountBalanceCards className="p-6" />;
       case 'metrics':
         return <MetricsCards transactions={filteredTransactions} categories={categoryTotals} />;
       case 'filter':
@@ -178,6 +187,9 @@ export default function Home() {
               onDateFilter={(start, end) => {
                 setStartDate(start);
                 setEndDate(end);
+              }}
+              onTagFilter={(includes, excludes) => {
+                setTagFilter(includes);
               }}
             />
           </div>

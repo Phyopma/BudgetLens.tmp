@@ -257,7 +257,7 @@ export function MetricsCards({ transactions, categories }: MetricsCardsProps) {
       icon: "DollarSign",
       value: "$0.00",
       calculation: (t) => {
-        const total = t.reduce((sum, tx) => sum + tx.amount, 0);
+        const total = t.reduce((sum, tx) => sum + (tx.transactionType.toLowerCase() === 'debit' ? tx.amount : 0), 0);
         return { value: `$${total.toFixed(2)}` };
       },
     },

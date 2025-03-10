@@ -47,6 +47,47 @@
 
 ## Installation Options
 
+### Docker Development Notes
+
+#### Package Installation Between Local and Docker
+
+When installing new packages locally, they weren't reflecting in the Docker container. This happens because Docker containers have their own isolated filesystem, and the way volumes are mounted affects how files are shared between your local machine and the container.
+
+**The Issue:** In the original configuration, the local directory was mounted before the named volumes, causing local `node_modules` to override the container's `node_modules`.
+
+**The Solution:** The volume mounts in `docker-compose.yml` have been reordered to ensure named volumes are mounted first:
+
+```yaml
+volumes:
+  - app_node_modules:/app/node_modules
+  - app_next_cache:/app/.next
+  - app_prisma:/app/node_modules/.prisma
+  - ./:/app:delegated
+```
+
+After this change, you need to rebuild your Docker container:
+
+```bash
+docker-compose down
+docker-compose up --build
+```
+
+When installing new packages, you'll need to install them in both environments:
+
+```bash
+# Install locally
+npm install some-package
+
+# Install in Docker container
+docker-compose exec app npm install some-package
+```
+
+Or just install directly in the container:
+
+```bash
+docker-compose exec app npm install some-package
+```
+
 ### Option 1: Local Development Setup
 1. **Prerequisites**:
    - Node.js 18+
