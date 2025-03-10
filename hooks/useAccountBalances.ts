@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import type { AccountBalance } from '@prisma/client';
+import { useState, useEffect } from "react";
+import type { AccountBalance } from "@prisma/client";
 
-export type AccountType = 'AdvPlusBanking' | 'AdvantageSavings' | 'ChaseCollege';
+export type AccountType = string; // Changed from specific types to string for account IDs
 
 export interface AccountBalanceSummary {
   totalBalance: number;
@@ -18,31 +18,28 @@ export const useAccountBalances = () => {
   const fetchAccountBalances = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/account-balances');
-      if (!response.ok) throw new Error('Failed to fetch account balances');
+      const response = await fetch("/api/account-balances");
+      if (!response.ok) throw new Error("Failed to fetch account balances");
 
       const data = await response.json();
       setAccountBalances(data);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
-  const addAccountBalance = async (accountBalance: {
-    accountType: AccountType;
-    balance: number;
-  }) => {
+  const addAccountBalance = async (accountId: string, balance: number) => {
     try {
-      const response = await fetch('/api/account-balances', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(accountBalance),
+      const response = await fetch("/api/account-balances", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId, balance }),
       });
 
-      if (!response.ok) throw new Error('Failed to add account balance');
+      if (!response.ok) throw new Error("Failed to add account balance");
 
       const newAccountBalance = await response.json();
       setAccountBalances((prev) => [newAccountBalance, ...prev]);
@@ -50,7 +47,7 @@ export const useAccountBalances = () => {
       return newAccountBalance;
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to add account balance'
+        err instanceof Error ? err.message : "Failed to add account balance"
       );
       throw err;
     }
@@ -58,16 +55,17 @@ export const useAccountBalances = () => {
 
   const updateAccountBalance = async (
     id: string,
-    accountBalance: Partial<AccountBalance>
+    accountId: string,
+    balance: number
   ) => {
     try {
-      const response = await fetch('/api/account-balances', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, ...accountBalance }),
+      const response = await fetch("/api/account-balances", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, accountId, balance }),
       });
 
-      if (!response.ok) throw new Error('Failed to update account balance');
+      if (!response.ok) throw new Error("Failed to update account balance");
 
       const updatedAccountBalance = await response.json();
       setAccountBalances((prev) =>
@@ -76,43 +74,30 @@ export const useAccountBalances = () => {
       return updatedAccountBalance;
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to update account balance'
+        err instanceof Error ? err.message : "Failed to update account balance"
       );
       throw err;
     }
   };
 
   const getLatestBalances = () => {
-    const latestBalances: Record<AccountType, AccountBalance | undefined> = {
-      AdvPlusBanking: undefined,
-      AdvantageSavings: undefined,
-      ChaseCollege: undefined,
-    };
+    // Updated to work with accountId instead of accountType
+    const balancesByAccount: Record<string, AccountBalance> = {};
 
-    // Group by account type
-    const balancesByType = accountBalances.reduce<Record<string, AccountBalance[]>>(
-      (acc, balance) => {
-        if (!acc[balance.accountType]) {
-          acc[balance.accountType] = [];
-        }
-        acc[balance.accountType].push(balance);
-        return acc;
-      },
-      {}
-    );
+    // Group by accountId
+    accountBalances.forEach((balance) => {
+      const accountId = balance.accountId;
 
-    // Get the latest balance for each account type
-    Object.entries(balancesByType).forEach(([type, balances]) => {
-      if (balances.length > 0) {
-        // Sort by timestamp in descending order
-        const sorted = [...balances].sort(
-          (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        );
-        latestBalances[type as AccountType] = sorted[0];
+      if (
+        !balancesByAccount[accountId] ||
+        new Date(balance.timestamp) >
+          new Date(balancesByAccount[accountId].timestamp)
+      ) {
+        balancesByAccount[accountId] = balance;
       }
     });
 
-    return latestBalances;
+    return balancesByAccount;
   };
 
   const getAccountBalanceSummary = (): AccountBalanceSummary => {
@@ -128,7 +113,7 @@ export const useAccountBalances = () => {
     previousMonthDate.setMonth(previousMonthDate.getMonth() - 1);
 
     // Filter balances from previous month
-    const previousMonthBalances = accountBalances.filter(balance => {
+    const previousMonthBalances = accountBalances.filter((balance) => {
       const balanceDate = new Date(balance.timestamp);
       return (
         balanceDate.getMonth() === previousMonthDate.getMonth() &&
@@ -138,9 +123,12 @@ export const useAccountBalances = () => {
 
     // Group by account type and get the latest for each type in the previous month
     const prevMonthLatestByType: Record<string, AccountBalance> = {};
-    previousMonthBalances.forEach(balance => {
+    previousMonthBalances.forEach((balance) => {
       const existing = prevMonthLatestByType[balance.accountType];
-      if (!existing || new Date(balance.timestamp) > new Date(existing.timestamp)) {
+      if (
+        !existing ||
+        new Date(balance.timestamp) > new Date(existing.timestamp)
+      ) {
         prevMonthLatestByType[balance.accountType] = balance;
       }
     });
@@ -151,9 +139,10 @@ export const useAccountBalances = () => {
     );
 
     const monthlyDifference = totalBalance - previousMonthTotal;
-    const monthlyDifferencePercentage = previousMonthTotal !== 0 
-      ? (monthlyDifference / previousMonthTotal) * 100 
-      : 0;
+    const monthlyDifferencePercentage =
+      previousMonthTotal !== 0
+        ? (monthlyDifference / previousMonthTotal) * 100
+        : 0;
 
     return {
       totalBalance,

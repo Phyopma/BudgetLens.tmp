@@ -2,9 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { DndContext, closestCenter } from "@dnd-kit/core";
-import { arrayMove, SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
+import {
+  arrayMove,
+  SortableContext,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
 import { Transaction, CategoryTotal, MonthlySpending } from "@/lib/types";
-import { parseCSV, calculateCategoryTotals, calculateMonthlySpending } from "@/lib/utils/data";
+import {
+  parseCSV,
+  calculateCategoryTotals,
+  calculateMonthlySpending,
+} from "@/lib/utils/data";
 import { MetricsCards } from "@/components/dashboard/MetricsCards";
 import { SpendingChart } from "@/components/dashboard/SpendingChart";
 import { CategoryPieChart } from "@/components/dashboard/CategoryPieChart";
@@ -18,7 +26,12 @@ import { DynamicCharts } from "@/components/dashboard/DynamicCharts";
 import { DashboardCustomizer } from "@/components/dashboard/DashboardCustomizer";
 import BudgetGoals from "@/components/dashboard/BudgetGoals";
 import { AccountBalanceCards } from "@/components/dashboard/AccountBalanceCards";
-import { SAMPLE_DATA, INITIAL_LAYOUT, RESET_FILTER_VALUE, INITIAL_BUDGET_GOALS } from "@/lib/utils/constants";
+import {
+  SAMPLE_DATA,
+  INITIAL_LAYOUT,
+  RESET_FILTER_VALUE,
+  INITIAL_BUDGET_GOALS,
+} from "@/lib/utils/constants";
 import { useTransactions } from "@/hooks/useTransactions";
 
 export default function Home() {
@@ -30,21 +43,26 @@ export default function Home() {
     addTransaction,
     updateTransaction,
     deleteTransaction,
-    importTransactions
+    importTransactions,
   } = useTransactions();
-  
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
+
+  const [filteredTransactions, setFilteredTransactions] = useState<
+    Transaction[]
+  >([]);
   const [categoryTotals, setCategoryTotals] = useState<CategoryTotal[]>([]);
   const [monthlySpending, setMonthlySpending] = useState<MonthlySpending[]>([]);
   const [layout, setLayout] = useState(INITIAL_LAYOUT);
   const [activeComponents, setActiveComponents] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [vendorFilter, setVendorFilter] = useState<string[]>([]);
-  const [transactionTypeFilter, setTransactionTypeFilter] = useState<string[]>([]);
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState<string[]>(
+    []
+  );
   const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [budgetGoals, setBudgetGoals] = useState<{ categoryId: string; amount: number; }[]>(INITIAL_BUDGET_GOALS);
+  const [budgetGoals, setBudgetGoals] =
+    useState<{ categoryId: string; amount: number }[]>(INITIAL_BUDGET_GOALS);
   const [budgetGoalSettings, setBudgetGoalSettings] = useState<{
     isYearlyView: boolean;
     showOverBudgetWarnings: boolean;
@@ -52,27 +70,31 @@ export default function Home() {
   }>({
     isYearlyView: false,
     showOverBudgetWarnings: true,
-    showProgressBars: true
+    showProgressBars: true,
   });
 
   // Set filtered transactions whenever transactions or filters change
   useEffect(() => {
     let filtered = transactions;
-    
+
     if (categoryFilter.length > 0) {
-      filtered = filtered.filter(t => categoryFilter.includes(t.category));
+      filtered = filtered.filter((t) => categoryFilter.includes(t.category));
     }
     if (vendorFilter.length > 0) {
-      filtered = filtered.filter(t => vendorFilter.includes(t.vendor));
+      filtered = filtered.filter((t) => vendorFilter.includes(t.vendor));
     }
     if (transactionTypeFilter.length > 0) {
-      filtered = filtered.filter(t => transactionTypeFilter.includes(t.transactionType));
+      filtered = filtered.filter((t) =>
+        transactionTypeFilter.includes(t.transactionType)
+      );
     }
     if (tagFilter.length > 0) {
-      filtered = filtered.filter(t => t.tags && t.tags.some(tag => tagFilter.includes(tag)));
+      filtered = filtered.filter(
+        (t) => t.tags && t.tags.some((tag) => tagFilter.includes(tag))
+      );
     }
     if (startDate || endDate) {
-      filtered = filtered.filter(t => {
+      filtered = filtered.filter((t) => {
         const transactionDate = new Date(t.date);
         if (startDate && endDate) {
           return transactionDate >= startDate && transactionDate <= endDate;
@@ -86,7 +108,15 @@ export default function Home() {
     }
 
     setFilteredTransactions(filtered);
-  }, [transactions, categoryFilter, vendorFilter, transactionTypeFilter, tagFilter, startDate, endDate]);
+  }, [
+    transactions,
+    categoryFilter,
+    vendorFilter,
+    transactionTypeFilter,
+    tagFilter,
+    startDate,
+    endDate,
+  ]);
 
   // Calculate totals whenever filtered transactions change
   useEffect(() => {
@@ -97,8 +127,8 @@ export default function Home() {
   }, [filteredTransactions]);
 
   const handleAddComponent = (componentType: string) => {
-    setActiveComponents(prev => [...prev, componentType]);
-    setLayout(prev => [...prev, componentType]);
+    setActiveComponents((prev) => [...prev, componentType]);
+    setLayout((prev) => [...prev, componentType]);
   };
 
   const handleDragEnd = (event: any) => {
@@ -142,7 +172,10 @@ export default function Home() {
     addTransaction(newTransaction);
   };
 
-  const handleUpdateTransaction = (oldTransaction: Transaction, newTransaction: Transaction) => {
+  const handleUpdateTransaction = (
+    oldTransaction: Transaction,
+    newTransaction: Transaction
+  ) => {
     updateTransaction(oldTransaction, newTransaction);
   };
 
@@ -150,10 +183,16 @@ export default function Home() {
     deleteTransaction(transactionToDelete);
   };
 
-  const handleCategoryFilter = (includes: string[], excludes: string[]) => setCategoryFilter(includes);
-  const handleVendorFilter = (includes: string[], excludes: string[]) => setVendorFilter(includes);
-  const handleTransactionTypeFilter = (includes: string[], excludes: string[]) => setTransactionTypeFilter(includes);
-  const handleTagFilter = (includes: string[], excludes: string[]) => setTagFilter(includes);
+  const handleCategoryFilter = (includes: string[], excludes: string[]) =>
+    setCategoryFilter(includes);
+  const handleVendorFilter = (includes: string[], excludes: string[]) =>
+    setVendorFilter(includes);
+  const handleTransactionTypeFilter = (
+    includes: string[],
+    excludes: string[]
+  ) => setTransactionTypeFilter(includes);
+  const handleTagFilter = (includes: string[], excludes: string[]) =>
+    setTagFilter(includes);
 
   const handleEdit = (id: string) => {
     console.log(`Edit card with id: ${id}`);
@@ -166,11 +205,16 @@ export default function Home() {
 
   const renderComponent = (type: string) => {
     switch (type) {
-      case 'account-balances':
+      case "account-balances":
         return <AccountBalanceCards className="p-6" />;
-      case 'metrics':
-        return <MetricsCards transactions={filteredTransactions} categories={categoryTotals} />;
-      case 'filter':
+      case "metrics":
+        return (
+          <MetricsCards
+            transactions={filteredTransactions}
+            categories={categoryTotals}
+          />
+        );
+      case "filter":
         return (
           <div className="mt-6">
             <FilterBar
@@ -194,49 +238,72 @@ export default function Home() {
             />
           </div>
         );
-      case 'dynamic-charts':
+      case "dynamic-charts":
         return (
           <DynamicCharts
             data={filteredTransactions}
-            availableMetrics={['expenses', 'income', 'savings']}
-            formatValue={(value) => (typeof value === 'number' ? `$${value.toFixed(2)}` : '$0.00')}
-            formatTooltip={(value) => (typeof value === 'number' ? `$${value.toFixed(2)}` : '$0.00')}
-            formatAxisLabel={(value) => (typeof value === 'number' ? `$${(value / 1000).toFixed(1)}k` : '$0k')}
+            availableMetrics={["expenses", "income", "savings"]}
+            formatValue={(value) =>
+              typeof value === "number" ? `$${value.toFixed(2)}` : "$0.00"
+            }
+            formatTooltip={(value) =>
+              typeof value === "number" ? `$${value.toFixed(2)}` : "$0.00"
+            }
+            formatAxisLabel={(value) =>
+              typeof value === "number"
+                ? `$${(value / 1000).toFixed(1)}k`
+                : "$0k"
+            }
           />
         );
-      case 'spending':
-        return <SpendingChart transactions={filteredTransactions} />
-      case 'categories':
-        return <CategoryPieChart transactions={filteredTransactions} categoryTotals={categoryTotals} />;
-      case 'total-metrics':
+      case "spending":
+        return <SpendingChart transactions={filteredTransactions} />;
+      case "categories":
+        return (
+          <CategoryPieChart
+            transactions={filteredTransactions}
+            categoryTotals={categoryTotals}
+          />
+        );
+      case "total-metrics":
         return <TotalMetricsChart transactions={filteredTransactions} />;
-      case 'monthly-trends':
-        return <MonthlyTrendsChart transactions={filteredTransactions} chartType='line' />;
-      case 'monthly':
-        return <MonthlyTrendsChart transactions={filteredTransactions} chartType='bar-vertical' />;
-      case 'transactions':
+      case "monthly-trends":
+        return (
+          <MonthlyTrendsChart
+            transactions={filteredTransactions}
+            chartType="line"
+          />
+        );
+      case "monthly":
+        return (
+          <MonthlyTrendsChart
+            transactions={filteredTransactions}
+            chartType="bar-vertical"
+          />
+        );
+      case "transactions":
         return (
           <div className="p-6">
             <h2 className="text-2xl font-semibold mb-4">Recent Transactions</h2>
-            <TransactionsTable 
-              transactions={filteredTransactions} 
+            <TransactionsTable
+              transactions={filteredTransactions}
               onAddTransaction={handleAddTransaction}
               onUpdateTransaction={handleUpdateTransaction}
               onDeleteTransaction={handleDeleteTransaction}
             />
           </div>
         );
-      case 'budget-goals':
+      case "budget-goals":
         return (
-          <BudgetGoals 
-            categories={categoryTotals} 
+          <BudgetGoals
+            categories={categoryTotals}
             initialGoals={budgetGoals}
             onSaveGoals={setBudgetGoals}
             settings={budgetGoalSettings}
             onSettingsChange={setBudgetGoalSettings}
           />
         );
-      case 'csv-upload':
+      case "csv-upload":
         return <CSVUpload onUpload={handleCSVUpload} />;
       default:
         return null;
@@ -252,14 +319,15 @@ export default function Home() {
         activeComponents={activeComponents}
       />
 
-      <DndContext
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
+      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={layout} strategy={rectSortingStrategy}>
           <div className="space-y-8">
             {layout.map((componentType) => (
-              <DraggableCard key={componentType} id={componentType} onEdit={() => handleEdit(componentType)} onDelete={() => handleDelete(componentType)}>
+              <DraggableCard
+                key={componentType}
+                id={componentType}
+                onEdit={() => handleEdit(componentType)}
+                onDelete={() => handleDelete(componentType)}>
                 {renderComponent(componentType)}
               </DraggableCard>
             ))}
