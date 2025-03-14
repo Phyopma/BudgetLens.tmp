@@ -106,10 +106,15 @@ const SelectLabel = React.forwardRef<
 ));
 SelectLabel.displayName = SelectPrimitive.Label.displayName;
 
+interface SelectItemProps extends React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item> {
+  selectionState?: number;
+  onMultiStateChange?: (value: string) => void;
+}
+
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, ...props }, ref) => (
+  SelectItemProps
+>(({ className, children, selectionState, onMultiStateChange, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
     className={cn(

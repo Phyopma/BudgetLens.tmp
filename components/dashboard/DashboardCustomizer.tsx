@@ -15,75 +15,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface DashboardComponent {
-  id: string;
-  type: 'metrics' | 'filter' | 'dynamic-charts' | string;
-  title: string;
-  description: string;
-}
+import { AVAILABLE_COMPONENTS } from '@/lib/utils/constants';
 
-const AVAILABLE_COMPONENTS: DashboardComponent[] = [
-  {
-    id: 'csv-upload',
-    type: 'csv-upload',
-    title: 'Import Transactions',
-    description: 'Upload and import transaction data from CSV files'
-  },
-  {
-    id: 'metrics',
-    type: 'metrics',
-    title: 'Metrics Cards',
-    description: 'Display key financial metrics in card format'
-  },
-  {
-    id: 'filter',
-    type: 'filter',
-    title: 'Filter Bar',
-    description: 'Filter transactions by category, date, and type'
-  },
-  {
-    id: 'dynamic-charts',
-    type: 'dynamic-charts',
-    title: 'Custom Charts',
-    description: 'Create and customize your own charts'
-  },
-  {
-    id: 'spending',
-    type: 'spending',
-    title: 'Spending Chart',
-    description: 'Visualize spending patterns by category'
-  },
-  {
-    id: 'pie',
-    type: 'pie',
-    title: 'Category Pie Chart',
-    description: 'View expense distribution in a pie chart'
-  },
-  {
-    id: 'total-metrics',
-    type: 'total-metrics',
-    title: 'Total Metrics Chart',
-    description: 'Compare total income, expenses, and savings'
-  },
-  {
-    id: 'monthly-trends',
-    type: 'monthly-trends',
-    title: 'Monthly Trends',
-    description: 'Track financial trends over time'
-  },
-  {
-    id: 'transactions',
-    type: 'transactions',
-    title: 'Transactions Table',
-    description: 'View and manage all transactions'
-  },
-  {
-    id: 'budget-goals',
-    type: 'budget-goals',
-    title: 'Budget Goals',
-    description: 'Set and track budget goals by category'
-  }
-];
 
 interface DashboardCustomizerProps {
   onAddComponent: (componentType: string) => void;
@@ -92,6 +25,13 @@ interface DashboardCustomizerProps {
 
 export function DashboardCustomizer({ onAddComponent, activeComponents }: DashboardCustomizerProps) {
   const [open, setOpen] = useState(false);
+
+  const availableComponents = AVAILABLE_COMPONENTS.filter(
+    (component) => !activeComponents.includes(component.type)
+  );
+
+
+  
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -110,8 +50,7 @@ export function DashboardCustomizer({ onAddComponent, activeComponents }: Dashbo
         </DialogHeader>
         <ScrollArea className="h-[400px] pr-4">
           <div className="grid grid-cols-2 gap-4">
-            {AVAILABLE_COMPONENTS.map((component) => {
-              const isActive = activeComponents.includes(component.type);
+            {availableComponents.map((component) => {
               return (
                 <Card
                   key={component.id}

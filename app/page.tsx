@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { DndContext, closestCenter } from "@dnd-kit/core";
+import { loadDashboardConfig, saveDashboardConfig } from "@/lib/utils/dashboardConfig";
 import {
   arrayMove,
   SortableContext,
@@ -26,6 +27,7 @@ import { DynamicCharts } from "@/components/dashboard/DynamicCharts";
 import { DashboardCustomizer } from "@/components/dashboard/DashboardCustomizer";
 import BudgetGoals from "@/components/dashboard/BudgetGoals";
 import { AccountBalanceCards } from "@/components/dashboard/AccountBalanceCards";
+import { TransactionSharing } from "@/components/dashboard/TransactionSharing";
 import {
   SAMPLE_DATA,
   INITIAL_LAYOUT,
@@ -51,8 +53,22 @@ export default function Home() {
   >([]);
   const [categoryTotals, setCategoryTotals] = useState<CategoryTotal[]>([]);
   const [monthlySpending, setMonthlySpending] = useState<MonthlySpending[]>([]);
-  const [layout, setLayout] = useState(INITIAL_LAYOUT);
+  const [layout, setLayout] = useState<string[]>([]);
   const [activeComponents, setActiveComponents] = useState<string[]>([]);
+
+  // Load dashboard configuration from cookies
+  useEffect(() => {
+    const savedConfig = loadDashboardConfig();
+    if (savedConfig) {
+      setLayout(savedConfig.layout);
+      setActiveComponents(savedConfig.activeComponents);
+    } else {
+      const defaultComponents = ['metrics-cards', 'account-balance-cards', 'transactions-table', 'spending-chart'];
+      setLayout(defaultComponents);
+      setActiveComponents(defaultComponents);
+      saveDashboardConfig({ layout: defaultComponents, activeComponents: defaultComponents });
+    }
+  }, []);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [vendorFilter, setVendorFilter] = useState<string[]>([]);
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<string[]>(
@@ -127,7 +143,12 @@ export default function Home() {
   }, [filteredTransactions]);
 
   const handleAddComponent = (componentType: string) => {
-    setActiveComponents((prev) => [...prev, componentType]);
+    setActiveComponents((prev) => {
+      const newActiveComponents = [...prev, componentType];
+      const newLayout = [...layout, componentType];
+      saveDashboardConfig({ layout: newLayout, activeComponents: newActiveComponents });
+      return newActiveComponents;
+    });
     setLayout((prev) => [...prev, componentType]);
   };
 
@@ -135,9 +156,9 @@ export default function Home() {
     const { active, over } = event;
     if (active.id !== over.id) {
       setLayout((items) => {
-        const oldIndex = items.indexOf(active.id);
-        const newIndex = items.indexOf(over.id);
-        return arrayMove(items, oldIndex, newIndex);
+        const newLayout = arrayMove(items, items.indexOf(active.id), items.indexOf(over.id));
+        saveDashboardConfig({ layout: newLayout, activeComponents });
+        return newLayout;
       });
     }
   };
@@ -200,7 +221,15 @@ export default function Home() {
   };
 
   const handleDelete = (id: string) => {
-    setLayout((prevLayout) => prevLayout.filter((cardId) => cardId !== id));
+    setLayout((prevLayout) => {
+      const newLayout = prevLayout.filter((cardId) => cardId !== id);
+      setActiveComponents((prev) => {
+        const newActiveComponents = prev.filter((componentType) => componentType !== id);
+        saveDashboardConfig({ layout: newLayout, activeComponents: newActiveComponents });
+        return newActiveComponents;
+      });
+      return newLayout;
+    });
   };
 
   const renderComponent = (type: string) => {
@@ -305,6 +334,8 @@ export default function Home() {
         );
       case "csv-upload":
         return <CSVUpload onUpload={handleCSVUpload} />;
+      case "transaction-sharing":
+        return <TransactionSharing className="p-6" />;
       default:
         return null;
     }

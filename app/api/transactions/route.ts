@@ -67,7 +67,9 @@ export async function GET(request: NextRequest) {
     const amount = searchParams.get('amount');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const includeShared = searchParams.get('includeShared') !== 'false'; // Default to true
 
+    // Build the where clause for the user's own transactions
     const where: any = {
       userId: userId // Filter by the authenticated user's ID
     };
@@ -82,10 +84,61 @@ export async function GET(request: NextRequest) {
       if (endDate) where.date.lte = endDate;
     }
 
-    const transactions = await prisma.transaction.findMany({
+    // Get user's own transactions
+    const ownTransactions = await prisma.transaction.findMany({
       where,
       orderBy: { date: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
     });
+    
+    // If includeShared is true, also get transactions shared with the user
+    let sharedTransactions = [];
+    if (includeShared) {
+      // Build the where clause for shared transactions
+      const sharedWhere: any = {};
+      
+      if (category) sharedWhere.category = category;
+      if (vendor) sharedWhere.vendor = vendor;
+      if (transactionType) sharedWhere.transactionType = transactionType;
+      if (amount) sharedWhere.amount = parseFloat(amount);
+      if (startDate || endDate) {
+        sharedWhere.date = {};
+        if (startDate) sharedWhere.date.gte = startDate;
+        if (endDate) sharedWhere.date.lte = endDate;
+      }
+      
+      sharedTransactions = await prisma.transaction.findMany({
+        where: {
+          ...sharedWhere,
+          sharedWith: {
+            some: {
+              id: userId
+            }
+          }
+        },
+        orderBy: { date: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
+      });
+    }
+    
+    // Combine and return all transactions
+    const transactions = [...ownTransactions, ...sharedTransactions];
 
     return NextResponse.json(transactions);
   } catch (error) {

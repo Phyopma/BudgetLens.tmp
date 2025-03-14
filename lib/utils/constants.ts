@@ -48,11 +48,98 @@ export const SAMPLE_DATA = `date,vendor,amount,category,transactionType
 
 export const INITIAL_LAYOUT = [
   'csv-upload',
-  "account-balances",
-  "filter",
-  "metrics",
-  "total-metrics",
-  "categories",
-  "transactions",
-  "budget-goals"
+  'account-balances',
+  'metrics',
+  'filter',
+  'spending',
+  'transactions'
 ];
+
+export const DEFAULT_ACTIVE_COMPONENTS = INITIAL_LAYOUT;
+
+export interface DashboardComponent {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+}
+
+export const AVAILABLE_COMPONENTS: DashboardComponent[] = [
+  {
+    id: 'account-balances',
+    type: 'account-balances',
+    title: 'Account Balances',
+    description: 'View and manage account balances with monthly comparison'
+  },
+  {
+    id: 'csv-upload',
+    type: 'csv-upload',
+    title: 'Import Transactions',
+    description: 'Upload and import transaction data from CSV files'
+  },
+  {
+    id: 'metrics',
+    type: 'metrics',
+    title: 'Metrics Cards',
+    description: 'Display key financial metrics in card format'
+  },
+  {
+    id: 'filter',
+    type: 'filter',
+    title: 'Filter Bar',
+    description: 'Filter transactions by category, date, and type'
+  },
+  {
+    id: 'dynamic-charts',
+    type: 'dynamic-charts',
+    title: 'Custom Charts',
+    description: 'Create and customize your own charts'
+  },
+  {
+    id: 'spending',
+    type: 'spending',
+    title: 'Spending Chart',
+    description: 'Visualize spending patterns by category'
+  },
+  {
+    id: 'pie',
+    type: 'pie',
+    title: 'Category Pie Chart',
+    description: 'View expense distribution in a pie chart'
+  },
+  {
+    id: 'total-metrics',
+    type: 'total-metrics',
+    title: 'Total Metrics Chart',
+    description: 'Compare total income, expenses, and savings'
+  },
+  {
+    id: 'monthly-trends',
+    type: 'monthly-trends',
+    title: 'Monthly Trends',
+    description: 'Track financial trends over time'
+  },
+  {
+    id: 'transactions',
+    type: 'transactions',
+    title: 'Transactions Table',
+    description: 'View and manage all transactions'
+  },
+  {
+    id: 'budget-goals',
+    type: 'budget-goals',
+    title: 'Budget Goals',
+    description: 'Set and track budget goals by category'
+  },
+  {
+    id: 'transaction-sharing',
+    type: 'transaction-sharing',
+    title: 'Transaction Sharing',
+    description: 'Invite others to access your transactions and manage sharing settings'
+  },
+
+];
+
+export const AVAILABLE_COMPONENT_TYPES = AVAILABLE_COMPONENTS.map(component => {
+  return component.type;
+});

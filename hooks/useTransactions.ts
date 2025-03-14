@@ -13,6 +13,7 @@ export const useTransactions = () => {
     tags?: string[];
     startDate?: Date;
     endDate?: Date;
+    includeShared?: boolean;
   }) => {
     try {
       setLoading(true);
@@ -32,6 +33,8 @@ export const useTransactions = () => {
         );
       if (filters?.endDate)
         params.append("endDate", filters.endDate.toISOString().split("T")[0]);
+      if (filters?.includeShared !== undefined)
+        params.append("includeShared", filters.includeShared.toString());
 
       const response = await fetch(`/api/transactions?${params}`);
       if (!response.ok) throw new Error("Failed to fetch transactions");
