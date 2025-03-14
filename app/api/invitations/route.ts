@@ -45,17 +45,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the invitation
+    // Find the recipient user if they exist
+    const recipientUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
     const invitation = await prisma.invitation.create({
       data: {
         email,
         senderId: userId,
         status: 'pending',
-        // If the recipient already exists in the system, link them
-        recipient: {
-          connect: {
-            email,
-          },
-        },
+        recipientId: recipientUser?.id || null
       },
     });
 

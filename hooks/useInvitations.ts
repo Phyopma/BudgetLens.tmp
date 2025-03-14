@@ -27,8 +27,9 @@ export const useInvitations = () => {
 
   // Initial fetch
   useEffect(() => {
-    fetchInvitations('all');
-  }, [fetchInvitations]);
+    // Don't fetch on initial mount to avoid race conditions with session
+    // The component will trigger the fetch when ready
+  }, []);
 
   const sendInvitation = async (email: string) => {
     try {

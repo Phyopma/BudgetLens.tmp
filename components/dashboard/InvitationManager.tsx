@@ -24,6 +24,7 @@ import {
 
 export function InvitationManager() {
   const { data: session } = useSession();
+  const userId = session?.user?.id as string;
   const { toast } = useToast();
   const {
     invitations,
@@ -184,11 +185,11 @@ export function InvitationManager() {
               </div>
             ) : error ? (
               <div className="text-center p-6 text-destructive">{error}</div>
-            ) : invitations.filter((invitation) => invitation.recipientEmail === session?.user?.email).length === 0 ? (
+            ) : invitations.filter((invitation) => invitation.email === session?.user?.email || (invitation.recipient && invitation.recipient.email === session?.user?.email)).length === 0 ? (
               <div className="text-center p-6 text-muted-foreground">No invitations received</div>
             ) : (
               invitations
-                .filter((invitation) => invitation.recipientEmail === session?.user?.email)
+                .filter((invitation) => invitation.email === session?.user?.email || (invitation.recipient && invitation.recipient.email === session?.user?.email))
                 .map((invitation) => (
                   <div
                     key={invitation.id}
@@ -197,7 +198,7 @@ export function InvitationManager() {
                     <div className="flex items-center space-x-4">
                       <Mail className="h-6 w-6" />
                       <div>
-                        <p className="font-medium">{invitation.senderEmail}</p>
+                        <p className="font-medium">{invitation.sender ? invitation.sender.email : 'Unknown sender'}</p>
                         <p className="text-sm text-gray-500">{getStatusBadge(invitation.status)}</p>
                       </div>
                     </div>
@@ -233,11 +234,11 @@ export function InvitationManager() {
               </div>
             ) : error ? (
               <div className="text-center p-6 text-destructive">{error}</div>
-            ) : invitations.filter((invitation) => invitation.senderEmail === session?.user?.email).length === 0 ? (
+            ) : invitations.filter((invitation) => invitation.senderId === userId).length === 0 ? (
               <div className="text-center p-6 text-muted-foreground">No invitations sent</div>
             ) : (
               invitations
-                .filter((invitation) => invitation.senderEmail === session?.user?.email)
+                .filter((invitation) => invitation.senderId === userId)
                 .map((invitation) => (
                   <div
                     key={invitation.id}
@@ -246,7 +247,7 @@ export function InvitationManager() {
                     <div className="flex items-center space-x-4">
                       <Mail className="h-6 w-6" />
                       <div>
-                        <p className="font-medium">{invitation.recipientEmail}</p>
+                        <p className="font-medium">{invitation.email}</p>
                         <p className="text-sm text-gray-500">{getStatusBadge(invitation.status)}</p>
                       </div>
                     </div>
