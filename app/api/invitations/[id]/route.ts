@@ -1,40 +1,49 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { NextRequest } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { NextRequest } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../../auth/[...nextauth]/route";
 
 // Handle invitation response (accept/reject)
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     // Get the authenticated user's session
     const session = await getServerSession(authOptions);
-    
+
     if (!session || !session.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
+
     const userId = session.user.id as string;
     const invitationId = params.id;
     const { status } = await request.json();
 
-    if (!['accepted', 'rejected'].includes(status)) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    if (!["accepted", "rejected"].includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
     // Find the invitation
     const invitation = await prisma.invitation.findUnique({
       where: { id: invitationId },
-      include: { sender: true }
+      include: { sender: true },
     });
 
     if (!invitation) {
-      return NextResponse.json({ error: 'Invitation not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: "Invitation not found" },
+        { status: 404 }
+      );
     }
 
     // Verify that the current user is the recipient of the invitation
     if (invitation.recipientId && invitation.recipientId !== userId) {
-      return NextResponse.json({ error: 'You are not authorized to respond to this invitation' }, { status: 403 });
+      return NextResponse.json(
+        { error: "You are not authorized to respond to this invitation" },
+        { status: 403 }
+      );
     }
 
     // If the invitation is for the user's email but not linked to their account yet
@@ -42,7 +51,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       // Update the invitation to link it to the user's account
       await prisma.invitation.update({
         where: { id: invitationId },
-        data: { recipientId: userId }
+        data: { recipientId: userId },
       });
     }
 
@@ -62,54 +71,47 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     });
 
     // If the invitation is accepted, share the sender's transactions with the recipient
-    if (status === 'accepted') {
+    if (status === "accepted") {
       // Get all transactions from the sender
       const senderTransactions = await prisma.transaction.findMany({
-        where: { userId: invitation.senderId }
+        where: { userId: invitation.senderId },
       });
 
-      // Add the recipient to the sharedWith field of each transaction
+      // Create SharedTransaction records for each transaction
       for (const transaction of senderTransactions) {
-        await prisma.transaction.update({
-          where: { id: transaction.id },
+        await prisma.sharedTransaction.create({
           data: {
-            sharedWith: {
-              connect: { id: userId }
-            }
-          }
+            transactionId: transaction.id,
+            sharedById: invitation.senderId,
+            sharedWithId: userId,
+          },
         });
       }
-
-      // Create a tag for the sender in the recipient's transactions
-      // This will help identify shared transactions
-      const senderName = invitation.sender?.name || 'Shared';
-      const senderTag = `From:${senderName}`;
-
-      // Update all shared transactions to include the sender tag
-      await prisma.$executeRaw`
-        UPDATE "Transaction"
-        SET tags = array_append(tags, ${senderTag})
-        WHERE "userId" = ${invitation.senderId}
-      `;
     }
 
     return NextResponse.json(updatedInvitation);
   } catch (error) {
-    console.error('Error responding to invitation:', error);
-    return NextResponse.json({ error: 'Error responding to invitation' }, { status: 500 });
+    console.error("Error responding to invitation:", error);
+    return NextResponse.json(
+      { error: "Error responding to invitation" },
+      { status: 500 }
+    );
   }
 }
 
 // Get a specific invitation
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     // Get the authenticated user's session
     const session = await getServerSession(authOptions);
-    
+
     if (!session || !session.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
+
     const userId = session.user.id as string;
     const invitationId = params.id;
 
@@ -135,17 +137,30 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     });
 
     if (!invitation) {
-      return NextResponse.json({ error: 'Invitation not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: "Invitation not found" },
+        { status: 404 }
+      );
     }
 
     // Verify that the current user is either the sender or the recipient
-    if (invitation.senderId !== userId && invitation.recipientId !== userId && invitation.email !== session.user.email) {
-      return NextResponse.json({ error: 'You are not authorized to view this invitation' }, { status: 403 });
+    if (
+      invitation.senderId !== userId &&
+      invitation.recipientId !== userId &&
+      invitation.email !== session.user.email
+    ) {
+      return NextResponse.json(
+        { error: "You are not authorized to view this invitation" },
+        { status: 403 }
+      );
     }
 
     return NextResponse.json(invitation);
   } catch (error) {
-    console.error('Error fetching invitation:', error);
-    return NextResponse.json({ error: 'Error fetching invitation' }, { status: 500 });
+    console.error("Error fetching invitation:", error);
+    return NextResponse.json(
+      { error: "Error fetching invitation" },
+      { status: 500 }
+    );
   }
 }

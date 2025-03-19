@@ -1,6 +1,13 @@
 "use client";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectSeparator,
+} from "@/components/ui/select";
 import { Transaction } from "@/lib/types";
 import { RESET_FILTER_VALUE } from "@/lib/utils/constants";
 import { useState, useEffect } from "react";
@@ -17,72 +24,77 @@ import { cn } from "@/lib/utils";
 
 interface FilterBarProps {
   transactions: Transaction[];
-  onCategoryFilter: (includes: string[], excludes: string[]) => void;
-  onVendorFilter: (includes: string[], excludes: string[]) => void;
-  onTransactionTypeFilter: (includes: string[], excludes: string[]) => void;
-  onDateFilter: (startDate: Date | undefined, endDate: Date | undefined) => void;
-  onTagFilter: (includes: string[], excludes: string[]) => void;
+  onCategoryFilter: (categories: string[]) => void;
+  onVendorFilter: (vendors: string[]) => void;
+  onTransactionTypeFilter: (types: string[]) => void;
+  onDateFilter: (
+    startDate: Date | undefined,
+    endDate: Date | undefined
+  ) => void;
 }
 
 interface SelectionStates {
-  [key: string]: 0 | 1 | 2;
+  [key: string]: number; // 0: unselected, 1: selected
 }
 
-export function FilterBar({ 
-  transactions, 
-  onCategoryFilter, 
-  onVendorFilter, 
+export function FilterBar({
+  transactions,
+  onCategoryFilter,
+  onVendorFilter,
   onTransactionTypeFilter,
   onDateFilter,
-  onTagFilter 
 }: FilterBarProps) {
   const [categoryStates, setCategoryStates] = useState<SelectionStates>({});
   const [vendorStates, setVendorStates] = useState<SelectionStates>({});
   const [typeStates, setTypeStates] = useState<SelectionStates>({});
-  const [tagStates, setTagStates] = useState<SelectionStates>({});
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [dateRange, setDateRange] = useState<{ min: Date; max: Date }>(() => {
     if (!transactions.length) {
       return {
         min: new Date(2020, 0, 1),
-        max: new Date()
+        max: new Date(),
       };
     }
-    const dates = transactions.map(t => new Date(t.date));
+    const dates = transactions.map((t) => new Date(t.date));
     return {
-      min: new Date(Math.min(...dates.map(d => d.getTime()))),
-      max: new Date(Math.max(...dates.map(d => d.getTime())))
+      min: new Date(Math.min(...dates.map((d) => d.getTime()))),
+      max: new Date(Math.max(...dates.map((d) => d.getTime()))),
     };
   });
 
   // Set initial date range on component mount
   useEffect(() => {
-    if (transactions.length > 0 && !startDate && !endDate && typeof onDateFilter === 'function') {
+    if (
+      transactions.length > 0 &&
+      !startDate &&
+      !endDate &&
+      typeof onDateFilter === "function"
+    ) {
       const newStartDate = dateRange.min;
       const newEndDate = dateRange.max;
       setStartDate(newStartDate);
       setEndDate(newEndDate);
       onDateFilter(newStartDate, newEndDate);
     }
-  }, [dateRange.max, dateRange.min, endDate, onDateFilter, startDate, transactions.length]); // Only run when transactions change
+  }, [
+    dateRange.max,
+    dateRange.min,
+    endDate,
+    onDateFilter,
+    startDate,
+    transactions.length,
+  ]); // Only run when transactions change
 
-  const categories = Array.from(new Set(transactions.map(t => t.category)));
-  const vendors = Array.from(new Set(transactions.map(t => t.vendor)));
-  const transactionTypes = Array.from(new Set(transactions.map(t => t.transactionType)));
-  
-  // Extract all unique tags from transactions
-  const allTags = Array.from(
-    new Set(
-      transactions
-        .flatMap(t => t.tags || [])
-        .filter(tag => tag) // Filter out empty tags
-    )
-  ).sort();
+  const categories = Array.from(new Set(transactions.map((t) => t.category)));
+  const vendors = Array.from(new Set(transactions.map((t) => t.vendor)));
+  const transactionTypes = Array.from(
+    new Set(transactions.map((t) => t.transactionType))
+  );
 
   const handleStartDateSelect = (date: Date | undefined) => {
     setStartDate(date);
-    if (typeof onDateFilter === 'function') {
+    if (typeof onDateFilter === "function") {
       if (date && endDate && date > endDate) {
         setEndDate(undefined);
         onDateFilter(date, undefined);
@@ -94,33 +106,35 @@ export function FilterBar({
 
   const handleEndDateSelect = (date: Date | undefined) => {
     setEndDate(date);
-    if (typeof onDateFilter === 'function') {
+    if (typeof onDateFilter === "function") {
       onDateFilter(startDate, date);
     }
   };
 
-  const handleStateChange = (
-    states: SelectionStates,
-    setStates: (states: SelectionStates) => void,
-    onFilter: (includes: string[], excludes: string[]) => void
-  ) => (value: string, state: 0 | 1 | 2) => {
-    const newStates = { ...states };
-    newStates[value] = state;
-    
-    setStates(newStates);
-    
-    const includes = Object.entries(newStates)
-      .filter(([_, state]) => state === 1)
-      .map(([value]) => value);
-    const excludes = Object.entries(newStates)
-      .filter(([_, state]) => state === 2)
-      .map(([value]) => value);
-    
-    onFilter(includes, excludes);
-  };
+  const handleStateChange =
+    (
+      states: SelectionStates,
+      setStates: (states: SelectionStates) => void,
+      onFilter: (includes: string[], excludes: string[]) => void
+    ) =>
+    (value: string, state: 0 | 1 | 2) => {
+      const newStates = { ...states };
+      newStates[value] = state;
+
+      setStates(newStates);
+
+      const includes = Object.entries(newStates)
+        .filter(([_, state]) => state === 1)
+        .map(([value]) => value);
+      const excludes = Object.entries(newStates)
+        .filter(([_, state]) => state === 2)
+        .map(([value]) => value);
+
+      onFilter(includes, excludes);
+    };
 
   const isAllSelected = (states: SelectionStates, items: string[]) => {
-    return items.every(item => states[item] === 1);
+    return items.every((item) => states[item] === 1);
   };
 
   const toggleAll = (
@@ -131,11 +145,11 @@ export function FilterBar({
   ) => {
     const allSelected = isAllSelected(states, items);
     const newStates: SelectionStates = {};
-    
-    items.forEach(item => {
+
+    items.forEach((item) => {
       newStates[item] = allSelected ? 0 : 1;
     });
-    
+
     setStates(newStates);
     onFilter(allSelected ? [] : items, []);
   };
@@ -151,8 +165,7 @@ export function FilterBar({
               className={cn(
                 "w-[180px] justify-start text-left font-normal",
                 !startDate && "text-muted-foreground"
-              )}
-            >
+              )}>
               <CalendarIcon className="mr-2 h-4 w-4" />
               {startDate ? format(startDate, "PPP") : <span>Start Date</span>}
             </Button>
@@ -176,8 +189,7 @@ export function FilterBar({
               className={cn(
                 "w-[180px] justify-start text-left font-normal",
                 !endDate && "text-muted-foreground"
-              )}
-            >
+              )}>
               <CalendarIcon className="mr-2 h-4 w-4" />
               {endDate ? format(endDate, "PPP") : <span>End Date</span>}
             </Button>
@@ -190,7 +202,7 @@ export function FilterBar({
               initialFocus
               fromDate={startDate || dateRange.min}
               toDate={dateRange.max}
-              disabled={(date) => startDate ? date < startDate : false}
+              disabled={(date) => (startDate ? date < startDate : false)}
             />
           </PopoverContent>
         </Popover>
@@ -203,8 +215,7 @@ export function FilterBar({
               setStartDate(undefined);
               setEndDate(undefined);
               onDateFilter(undefined, undefined);
-            }}
-          >
+            }}>
             Reset
           </Button>
         )}
@@ -218,18 +229,27 @@ export function FilterBar({
           <SelectItem
             value="__all__"
             selectionState={isAllSelected(categoryStates, categories) ? 1 : 0}
-            onMultiStateChange={() => toggleAll(categoryStates, setCategoryStates, categories, onCategoryFilter)}
-          >
+            onMultiStateChange={() =>
+              toggleAll(
+                categoryStates,
+                setCategoryStates,
+                categories,
+                onCategoryFilter
+              )
+            }>
             Select All
           </SelectItem>
           <SelectSeparator />
-          {categories.map(category => (
+          {categories.map((category) => (
             <SelectItem
               key={category}
               value={category}
               selectionState={categoryStates[category] || 0}
-              onMultiStateChange={handleStateChange(categoryStates, setCategoryStates, onCategoryFilter)}
-            >
+              onMultiStateChange={handleStateChange(
+                categoryStates,
+                setCategoryStates,
+                onCategoryFilter
+              )}>
               {category}
             </SelectItem>
           ))}
@@ -244,18 +264,22 @@ export function FilterBar({
           <SelectItem
             value="__all__"
             selectionState={isAllSelected(vendorStates, vendors) ? 1 : 0}
-            onMultiStateChange={() => toggleAll(vendorStates, setVendorStates, vendors, onVendorFilter)}
-          >
+            onMultiStateChange={() =>
+              toggleAll(vendorStates, setVendorStates, vendors, onVendorFilter)
+            }>
             Select All
           </SelectItem>
           <SelectSeparator />
-          {vendors.map(vendor => (
+          {vendors.map((vendor) => (
             <SelectItem
               key={vendor}
               value={vendor}
               selectionState={vendorStates[vendor] || 0}
-              onMultiStateChange={handleStateChange(vendorStates, setVendorStates, onVendorFilter)}
-            >
+              onMultiStateChange={handleStateChange(
+                vendorStates,
+                setVendorStates,
+                onVendorFilter
+              )}>
               {vendor}
             </SelectItem>
           ))}
@@ -270,52 +294,32 @@ export function FilterBar({
           <SelectItem
             value="__all__"
             selectionState={isAllSelected(typeStates, transactionTypes) ? 1 : 0}
-            onMultiStateChange={() => toggleAll(typeStates, setTypeStates, transactionTypes, onTransactionTypeFilter)}
-          >
+            onMultiStateChange={() =>
+              toggleAll(
+                typeStates,
+                setTypeStates,
+                transactionTypes,
+                onTransactionTypeFilter
+              )
+            }>
             Select All
           </SelectItem>
           <SelectSeparator />
-          {transactionTypes.map(type => (
+          {transactionTypes.map((type) => (
             <SelectItem
               key={type}
               value={type}
               selectionState={typeStates[type] || 0}
-              onMultiStateChange={handleStateChange(typeStates, setTypeStates, onTransactionTypeFilter)}
-            >
+              onMultiStateChange={handleStateChange(
+                typeStates,
+                setTypeStates,
+                onTransactionTypeFilter
+              )}>
               {type}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-
-      {/* Tags Filter */}
-      {allTags.length > 0 && (
-        <Select value="tags" onValueChange={() => {}}>
-          <SelectTrigger className="w-[180px]" aria-label="Filter by Tags">
-            <SelectValue>Filter by Tags</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem
-              value="__all__"
-              selectionState={isAllSelected(tagStates, allTags) ? 1 : 0}
-              onMultiStateChange={() => toggleAll(tagStates, setTagStates, allTags, onTagFilter)}
-            >
-              Select All
-            </SelectItem>
-            <SelectSeparator />
-            {allTags.map(tag => (
-              <SelectItem
-                key={tag}
-                value={tag}
-                selectionState={tagStates[tag] || 0}
-                onMultiStateChange={handleStateChange(tagStates, setTagStates, onTagFilter)}
-              >
-                {tag}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
     </div>
   );
 }

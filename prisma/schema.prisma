@@ -14,21 +14,22 @@ datasource db {
 }
 
 model User {
-  id                 String           @id @default(uuid())
+  id                 String             @id @default(uuid())
   name               String?
-  email              String           @unique
+  email              String             @unique
   password           String
   image              String?
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
   transactions       Transaction[]
   accounts           Account[]
   sessions           Session[]
   AccountBalance     AccountBalance[]
   BankAccount        BankAccount[]
-  sentInvitations    Invitation[]     @relation("Sender")
-  receivedInvitations Invitation[]     @relation("Recipient")
-  sharedTransactions Transaction[]    @relation("SharedWith")
+  sentInvitations    Invitation[]       @relation("Sender")
+  receivedInvitations Invitation[]       @relation("Recipient")
+  sharedTransactions SharedTransaction[] @relation("SharedWith")
+  sharedByMe         SharedTransaction[] @relation("SharedBy")
 }
 
 model Account {
@@ -59,24 +60,22 @@ model Session {
 }
 
 model Transaction {
-  id              String   @id @default(uuid())
+  id              String             @id @default(uuid())
   date            String
   vendor          String
-  amount          Float?   @default(0.0)
+  amount          Float?             @default(0.0)
   category        String
   transactionType String
-  tags            String[] @default([])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
   userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sharedWith      User[]   @relation("SharedWith")
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sharedWith      SharedTransaction[]
 
   @@index([date])
   @@index([category])
   @@index([vendor])
   @@index([transactionType])
-  @@index([tags])
   @@index([userId])
 }
 
@@ -129,4 +128,20 @@ model Invitation {
   @@index([recipientId])
   @@index([status])
   @@index([email])
+}
+
+model SharedTransaction {
+  id             String       @id @default(uuid())
+  transactionId  String
+  transaction    Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  sharedById     String
+  sharedBy       User         @relation("SharedBy", fields: [sharedById], references: [id], onDelete: Cascade)
+  sharedWithId   String
+  sharedWith     User         @relation("SharedWith", fields: [sharedWithId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  @@unique([transactionId, sharedWithId])
+  @@index([sharedById])
+  @@index([sharedWithId])
 }

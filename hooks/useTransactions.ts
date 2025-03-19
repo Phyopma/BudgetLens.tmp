@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Transaction } from "@prisma/client";
+import { parseCSV } from "../lib/utils/data";
 
 export const useTransactions = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -10,7 +11,6 @@ export const useTransactions = () => {
     category?: string[];
     vendor?: string[];
     transactionType?: string[];
-    tags?: string[];
     startDate?: Date;
     endDate?: Date;
     includeShared?: boolean;
@@ -25,7 +25,6 @@ export const useTransactions = () => {
         params.append("vendor", filters.vendor.join(","));
       if (filters?.transactionType?.length)
         params.append("transactionType", filters.transactionType.join(","));
-      if (filters?.tags?.length) params.append("tags", filters.tags.join(","));
       if (filters?.startDate)
         params.append(
           "startDate",
@@ -62,9 +61,7 @@ export const useTransactions = () => {
       if (!response.ok) throw new Error("Failed to add transaction");
 
       const newTransaction = await response.json();
-
       setTransactions((prev) => [newTransaction, ...prev]);
-
       return newTransaction;
     } catch (err) {
       setError(
@@ -74,22 +71,19 @@ export const useTransactions = () => {
     }
   };
 
-  const updateTransaction = async (
-    oldTransaction: Transaction,
-    newTransaction: Partial<Transaction>
-  ) => {
+  const updateTransaction = async (transaction: Transaction) => {
     try {
       const response = await fetch("/api/transactions", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: oldTransaction.id, ...newTransaction }),
+        body: JSON.stringify(transaction),
       });
 
       if (!response.ok) throw new Error("Failed to update transaction");
 
       const updatedTransaction = await response.json();
       setTransactions((prev) =>
-        prev.map((t) => (t.id === oldTransaction.id ? updatedTransaction : t))
+        prev.map((t) => (t.id === transaction.id ? updatedTransaction : t))
       );
       return updatedTransaction;
     } catch (err) {
@@ -119,35 +113,34 @@ export const useTransactions = () => {
 
   const importTransactions = async (csvContent: string) => {
     try {
-      const lines = csvContent.trim().split("\n");
-      const transactions = lines.slice(1).map((line) => {
-        const [date, vendor, amount, category, transactionType, tagsStr] = line
-          .split(",")
-          .map((item) => item.trim().replace(/^"|"$/g, ""));
-        const tags = tagsStr
-          ? tagsStr
-              .split(";")
-              .map((tag) => tag.trim())
-              .filter(Boolean)
-          : [];
+      // Parse CSV and validate required fields
+      const parsedTransactions = parseCSV(csvContent);
 
-        return {
-          date,
-          vendor,
-          amount: amount ? parseFloat(amount.replace(/[^\d.-]/g, "")) : 0,
-          category,
-          transactionType,
-          tags,
-        };
-      });
+      // Additional validation to ensure required fields are present
+      const validTransactions = parsedTransactions.filter(
+        (transaction) =>
+          transaction.date &&
+          transaction.vendor &&
+          transaction.category &&
+          transaction.transactionType
+      );
+
+      if (validTransactions.length === 0) {
+        throw new Error(
+          "No valid transactions found in CSV. Required fields: date, vendor, category, and transactionType"
+        );
+      }
 
       const response = await fetch("/api/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(transactions),
+        body: JSON.stringify(validTransactions),
       });
 
-      if (!response.ok) throw new Error("Failed to import transactions");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to import transactions");
+      }
 
       await fetchTransactions(); // Refresh the transactions list
     } catch (err) {
@@ -156,24 +149,6 @@ export const useTransactions = () => {
       );
       throw err;
     }
-  };
-
-  // Get all available tags from transactions
-  const getAvailableTags = () => {
-    const allTags = transactions
-      .flatMap((transaction) => transaction.tags || [])
-      .filter(Boolean);
-
-    return [...new Set(allTags)].sort();
-  };
-
-  // Filter transactions by tag
-  const filterTransactionsByTags = (tagFilters: string[]) => {
-    if (!tagFilters.length) return transactions;
-
-    return transactions.filter((transaction) =>
-      transaction.tags?.some((tag) => tagFilters.includes(tag))
-    );
   };
 
   useEffect(() => {
@@ -189,7 +164,5 @@ export const useTransactions = () => {
     updateTransaction,
     deleteTransaction,
     importTransactions,
-    getAvailableTags,
-    filterTransactionsByTags,
   };
 };

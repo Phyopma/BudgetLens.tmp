@@ -1,47 +1,80 @@
-import { Transaction, CategoryTotal, MonthlySpending } from '../types';
+import { Transaction, CategoryTotal, MonthlySpending } from "../types";
 
 export const parseCSV = (csvContent: string): Transaction[] => {
-  const lines = csvContent.trim().split('\n');
-  const transactions = lines.slice(1).map(line => {
-    const fields = [];
-    let currentField = '';
-    let inQuotes = false;
+  const lines = csvContent.trim().split("\n");
+  const transactions = lines.slice(1).map((line) => {
+    // Improved CSV parsing logic
+    const result = [];
+    let cell = "";
+    let isQuoted = false;
+    let i = 0;
 
-    for (let i = 0; i < line.length; i++) {
+    while (i < line.length) {
       const char = line[i];
+
       if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        fields.push(currentField.trim().replace(/^"|"$/g, ''));
-        currentField = '';
-      } else {
-        currentField += char;
+        // Toggle quoted state
+        isQuoted = !isQuoted;
+        // Skip this quote character
+        i++;
+        continue;
       }
+
+      if (char === "," && !isQuoted) {
+        // End of cell, add to result
+        result.push(cell.trim());
+        cell = "";
+        i++;
+        continue;
+      }
+
+      // Add character to current cell
+      cell += char;
+      i++;
     }
-    fields.push(currentField.trim().replace(/^"|"$/g, ''));
 
+    // Add the last cell
+    result.push(cell.trim());
 
-    const [date, vendor, amount, category, transactionType, accountName, labels, notes] = fields;
-    // Convert date from MM-DD-YYYY to YYYY-MM-DD format
-    const [month, day, year] = date.split('/');
-    const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    const [
+      date,
+      vendor,
+      amount,
+      category,
+      transactionType,
+      accountName,
+      labels,
+      notes,
+    ] = result;
+
+    // Convert date from MM/DD/YYYY to YYYY-MM-DD format
+    const [month, day, year] = date.split("/");
+    const formattedDate = `${year}-${month.padStart(2, "0")}-${day.padStart(
+      2,
+      "0"
+    )}`;
+
     return {
       date: formattedDate,
       vendor,
-      amount: amount ? parseFloat(amount.replace(/[^\d.-]/g, '')) : 0,
+      amount: amount ? parseFloat(amount.replace(/[^\d.-]/g, "")) : 0,
       category,
       transactionType,
-      tags: ["Me"]
+      tags: [],
     };
   });
+
   return filterDuplicateTransfers(transactions);
 };
 
-
 export const filterDuplicateTransfers = (transactions) => {
   // Separate transactions by category.
-  const nonTransfers = transactions.filter(tx => tx.category.toLowerCase() !== 'transfer');
-  const transfers = transactions.filter(tx => tx.category.toLowerCase() === 'transfer');
+  const nonTransfers = transactions.filter(
+    (tx) => tx.category.toLowerCase() !== "transfer"
+  );
+  const transfers = transactions.filter(
+    (tx) => tx.category.toLowerCase() === "transfer"
+  );
 
   // We'll mark transfer transactions that have a complementary match for removal.
   const removedIndices = new Set();
@@ -56,8 +89,10 @@ export const filterDuplicateTransfers = (transactions) => {
       // and that one is a credit and the other a debit.
       if (
         transfers[i].amount === transfers[j].amount &&
-        ((transfers[i].transactionType === 'credit' && transfers[j].transactionType === 'debit') ||
-         (transfers[i].transactionType === 'debit' && transfers[j].transactionType === 'credit'))
+        ((transfers[i].transactionType === "credit" &&
+          transfers[j].transactionType === "debit") ||
+          (transfers[i].transactionType === "debit" &&
+            transfers[j].transactionType === "credit"))
       ) {
         // Mark both transactions for removal.
         removedIndices.add(i);
@@ -68,31 +103,37 @@ export const filterDuplicateTransfers = (transactions) => {
   }
 
   // Retain only transfer transactions that weren't flagged for removal.
-  const filteredTransfers = transfers.filter((_, idx) => !removedIndices.has(idx));
-
+  const filteredTransfers = transfers.filter(
+    (_, idx) => !removedIndices.has(idx)
+  );
+  console.log("remove indices", removedIndices);
   // Return the combination of non-transfer transactions and filtered transfer transactions.
   return [...nonTransfers, ...filteredTransfers];
 };
 
-export const calculateCategoryTotals = (transactions: Transaction[]): CategoryTotal[] => {
+export const calculateCategoryTotals = (
+  transactions: Transaction[]
+): CategoryTotal[] => {
   const categoryMap = new Map<string, number>();
   const total = transactions.reduce((sum, t) => sum + t.amount, 0);
 
-  transactions.forEach(t => {
+  transactions.forEach((t) => {
     categoryMap.set(t.category, (categoryMap.get(t.category) || 0) + t.amount);
   });
 
   return Array.from(categoryMap.entries()).map(([category, amount]) => ({
     category,
     total: amount,
-    percentage: (amount / total) * 100
+    percentage: (amount / total) * 100,
   }));
 };
 
-export const calculateMonthlySpending = (transactions: Transaction[]): MonthlySpending[] => {
+export const calculateMonthlySpending = (
+  transactions: Transaction[]
+): MonthlySpending[] => {
   const monthlyMap = new Map<string, number>();
 
-  transactions.forEach(t => {
+  transactions.forEach((t) => {
     const month = t.date.substring(0, 2);
     const year = t.date.substring(6, 10);
     const key = `${year}-${month}`;

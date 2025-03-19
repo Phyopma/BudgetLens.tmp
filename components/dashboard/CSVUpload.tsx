@@ -1,58 +1,108 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 interface CSVUploadProps {
-  onUpload: (content: string) => void;
+  onUpload: (content: string) => Promise<void>;
 }
 
 export function CSVUpload({ onUpload }: CSVUploadProps) {
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    const reader = new FileReader();
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-    reader.onload = () => {
-      const content = reader.result as string;
-      onUpload(content);
-    };
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      setError(null);
+      setSuccess(false);
+    }
+  };
 
-    reader.readAsText(file);
-  }, [onUpload]);
+  const handleUpload = async () => {
+    if (!file) {
+      setError("Please select a file to upload");
+      return;
+    }
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      "text/csv": [".csv"],
-    },
-    maxFiles: 1,
-  });
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const content = await file.text();
+      await onUpload(content);
+      setSuccess(true);
+      setFile(null);
+      if (document.getElementById("csv-upload") as HTMLInputElement) {
+        (document.getElementById("csv-upload") as HTMLInputElement).value = "";
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to upload CSV");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Upload Transactions</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div
-          {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-            ${isDragActive ? "border-primary bg-primary/5" : "border-border"}`}
-        >
-          <input {...getInputProps()} />
-          <Upload className="mx-auto h-8 w-8 mb-4 text-muted-foreground" />
-          {isDragActive ? (
-            <p>Drop the CSV file here...</p>
-          ) : (
-            <p>Drag and drop a CSV file here, or click to select one</p>
-          )}
-          <p className="text-sm text-muted-foreground mt-2">
-            Format (Transactions): Date, Store/Vendor, Amount, Category, Type
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="p-6 border rounded-lg space-y-4">
+      <h2 className="text-2xl font-semibold mb-4">Import Transactions</h2>
+
+      <Alert className="mb-4">
+        <Info className="h-4 w-4" />
+        <AlertTitle>CSV Format Requirements</AlertTitle>
+        <AlertDescription>
+          Your CSV file must include the following columns:{" "}
+          <strong>date, vendor, category, transactionType</strong>, and amount
+          (optional).
+          <br />
+          Example: <code>date,vendor,amount,category,transactionType</code>
+        </AlertDescription>
+      </Alert>
+
+      <div className="space-y-2">
+        <Label htmlFor="csv-upload" className="text-sm font-medium">
+          Upload CSV File
+        </Label>
+        <input
+          id="csv-upload"
+          type="file"
+          accept=".csv"
+          onChange={handleFileChange}
+          className="w-full cursor-pointer rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
+        />
+      </div>
+
+      <Button
+        onClick={handleUpload}
+        disabled={!file || loading}
+        className="w-full">
+        {loading ? "Uploading..." : "Upload and Import"}
+      </Button>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {success && (
+        <Alert variant="default" className="bg-green-50 border-green-200">
+          <AlertTitle>Success</AlertTitle>
+          <AlertDescription>
+            Transactions imported successfully!
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
   );
 }

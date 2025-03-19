@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { DndContext, closestCenter } from "@dnd-kit/core";
-import { loadDashboardConfig, saveDashboardConfig } from "@/lib/utils/dashboardConfig";
+import {
+  loadDashboardConfig,
+  saveDashboardConfig,
+} from "@/lib/utils/dashboardConfig";
 import {
   arrayMove,
   SortableContext,
@@ -63,10 +66,18 @@ export default function Home() {
       setLayout(savedConfig.layout);
       setActiveComponents(savedConfig.activeComponents);
     } else {
-      const defaultComponents = ['metrics-cards', 'account-balance-cards', 'transactions-table', 'spending-chart'];
+      const defaultComponents = [
+        "metrics-cards",
+        "account-balance-cards",
+        "transactions-table",
+        "spending-chart",
+      ];
       setLayout(defaultComponents);
       setActiveComponents(defaultComponents);
-      saveDashboardConfig({ layout: defaultComponents, activeComponents: defaultComponents });
+      saveDashboardConfig({
+        layout: defaultComponents,
+        activeComponents: defaultComponents,
+      });
     }
   }, []);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
@@ -74,7 +85,6 @@ export default function Home() {
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<string[]>(
     []
   );
-  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [budgetGoals, setBudgetGoals] =
@@ -104,11 +114,6 @@ export default function Home() {
         transactionTypeFilter.includes(t.transactionType)
       );
     }
-    if (tagFilter.length > 0) {
-      filtered = filtered.filter(
-        (t) => t.tags && t.tags.some((tag) => tagFilter.includes(tag))
-      );
-    }
     if (startDate || endDate) {
       filtered = filtered.filter((t) => {
         const transactionDate = new Date(t.date);
@@ -129,7 +134,6 @@ export default function Home() {
     categoryFilter,
     vendorFilter,
     transactionTypeFilter,
-    tagFilter,
     startDate,
     endDate,
   ]);
@@ -146,7 +150,10 @@ export default function Home() {
     setActiveComponents((prev) => {
       const newActiveComponents = [...prev, componentType];
       const newLayout = [...layout, componentType];
-      saveDashboardConfig({ layout: newLayout, activeComponents: newActiveComponents });
+      saveDashboardConfig({
+        layout: newLayout,
+        activeComponents: newActiveComponents,
+      });
       return newActiveComponents;
     });
     setLayout((prev) => [...prev, componentType]);
@@ -156,7 +163,11 @@ export default function Home() {
     const { active, over } = event;
     if (active.id !== over.id) {
       setLayout((items) => {
-        const newLayout = arrayMove(items, items.indexOf(active.id), items.indexOf(over.id));
+        const newLayout = arrayMove(
+          items,
+          items.indexOf(active.id),
+          items.indexOf(over.id)
+        );
         saveDashboardConfig({ layout: newLayout, activeComponents });
         return newLayout;
       });
@@ -168,7 +179,6 @@ export default function Home() {
     setCategoryFilter([]);
     setVendorFilter([]);
     setTransactionTypeFilter([]);
-    setTagFilter([]);
   };
 
   if (loading) {
@@ -212,8 +222,6 @@ export default function Home() {
     includes: string[],
     excludes: string[]
   ) => setTransactionTypeFilter(includes);
-  const handleTagFilter = (includes: string[], excludes: string[]) =>
-    setTagFilter(includes);
 
   const handleEdit = (id: string) => {
     console.log(`Edit card with id: ${id}`);
@@ -224,8 +232,13 @@ export default function Home() {
     setLayout((prevLayout) => {
       const newLayout = prevLayout.filter((cardId) => cardId !== id);
       setActiveComponents((prev) => {
-        const newActiveComponents = prev.filter((componentType) => componentType !== id);
-        saveDashboardConfig({ layout: newLayout, activeComponents: newActiveComponents });
+        const newActiveComponents = prev.filter(
+          (componentType) => componentType !== id
+        );
+        saveDashboardConfig({
+          layout: newLayout,
+          activeComponents: newActiveComponents,
+        });
         return newActiveComponents;
       });
       return newLayout;
@@ -260,9 +273,6 @@ export default function Home() {
               onDateFilter={(start, end) => {
                 setStartDate(start);
                 setEndDate(end);
-              }}
-              onTagFilter={(includes, excludes) => {
-                setTagFilter(includes);
               }}
             />
           </div>

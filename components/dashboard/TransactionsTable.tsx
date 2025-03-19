@@ -50,9 +50,6 @@ interface TransactionsTableProps {
   onDeleteTransaction?: (transaction: Transaction) => void;
 }
 
-// Available tags for who is responsible for the transaction
-const availableTags = ["Me", "Brother", "Dad"];
-
 export function TransactionsTable({
   transactions,
   onAddTransaction,
@@ -73,12 +70,10 @@ export function TransactionsTable({
     vendor: "",
     category: "",
     transactionType: "",
-    tags: [],
   });
   const [openCategory, setOpenCategory] = useState(false);
   const [openType, setOpenType] = useState(false);
   const [openVendor, setOpenVendor] = useState(false);
-  const [openTags, setOpenTags] = useState(false);
   const [sortColumn, setSortColumn] = useState<keyof Transaction | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
@@ -126,7 +121,6 @@ export function TransactionsTable({
         vendor: newTransaction.vendor,
         category: newTransaction.category,
         transactionType: newTransaction.transactionType,
-        tags: newTransaction.tags || [],
       } as Transaction);
       setIsAddingTransaction(false);
       setNewTransaction({
@@ -135,7 +129,6 @@ export function TransactionsTable({
         vendor: "",
         category: "",
         transactionType: "",
-        tags: [],
       });
     }
   };
@@ -155,7 +148,6 @@ export function TransactionsTable({
         vendor: newTransaction.vendor,
         category: newTransaction.category,
         transactionType: newTransaction.transactionType,
-        tags: newTransaction.tags || [],
       } as Transaction);
       setIsEditingTransaction(false);
       setEditingTransaction(null);
@@ -165,7 +157,6 @@ export function TransactionsTable({
         vendor: "",
         category: "",
         transactionType: "",
-        tags: [],
       });
     }
   };
@@ -186,7 +177,6 @@ export function TransactionsTable({
       vendor: transaction.vendor,
       category: transaction.category,
       transactionType: transaction.transactionType,
-      tags: transaction.tags || [],
     });
     setIsEditingTransaction(true);
   };
@@ -247,29 +237,8 @@ export function TransactionsTable({
       vendor: transaction.vendor,
       category: transaction.category,
       transactionType: transaction.transactionType,
-      tags: transaction.tags || [],
     });
     setIsAddingTransaction(true);
-  };
-
-  // Toggle tag selection in the multiselect
-  const toggleTag = (tag: string) => {
-    setNewTransaction((prev) => {
-      const currentTags = prev.tags || [];
-      if (currentTags.includes(tag)) {
-        return { ...prev, tags: currentTags.filter((t) => t !== tag) };
-      } else {
-        return { ...prev, tags: [...currentTags, tag] };
-      }
-    });
-  };
-
-  // Remove a tag from the selected tags
-  const removeTag = (tag: string) => {
-    setNewTransaction((prev) => ({
-      ...prev,
-      tags: (prev.tags || []).filter((t) => t !== tag),
-    }));
   };
 
   const filteredTransactions = transactions.filter((t) => {
@@ -569,75 +538,6 @@ export function TransactionsTable({
                   </Popover>
                 </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="tags" className="text-right text-sm">
-                  Tags
-                </label>
-                <div className="col-span-3">
-                  <Popover open={openTags} onOpenChange={setOpenTags}>
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {(newTransaction.tags || []).map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="secondary"
-                          className="flex items-center gap-1">
-                          {tag}
-                          <X
-                            className="h-3 w-3 cursor-pointer"
-                            onClick={() => removeTag(tag)}
-                          />
-                        </Badge>
-                      ))}
-                    </div>
-                    <PopoverTrigger asChild>
-                      <Button
-                        id="tags"
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openTags}
-                        aria-label="Select tags"
-                        className="w-[300px] justify-between">
-                        Select responsible person(s)
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[300px] p-0">
-                      <Command>
-                        <CommandInput placeholder="Search tags..." />
-                        <CommandList>
-                          <CommandEmpty>No tags found</CommandEmpty>
-                          <CommandGroup>
-                            {availableTags.map((tag) => {
-                              const isSelected = (
-                                newTransaction.tags || []
-                              ).includes(tag);
-                              return (
-                                <CommandItem
-                                  key={tag}
-                                  onSelect={() => toggleTag(tag)}
-                                  className="flex items-center">
-                                  <div
-                                    className={cn(
-                                      "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
-                                      isSelected
-                                        ? "bg-primary border-primary text-primary-foreground"
-                                        : "opacity-50 border-input"
-                                    )}>
-                                    {isSelected && (
-                                      <Check className="h-3 w-3" />
-                                    )}
-                                  </div>
-                                  {tag}
-                                </CommandItem>
-                              );
-                            })}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
             </div>
             <DialogFooter>
               <Button
@@ -797,7 +697,7 @@ export function TransactionsTable({
                 {sortColumn === "transactionType" &&
                   (sortDirection === "asc" ? "↑" : "↓")}
               </TableHead>
-              <TableHead>Tags</TableHead>
+              <TableHead>Shared</TableHead>
               <TableHead className="flex justify-end px-6 items-center">
                 Actions
               </TableHead>
@@ -812,13 +712,11 @@ export function TransactionsTable({
                 <TableCell>{transaction.category}</TableCell>
                 <TableCell>{transaction.transactionType}</TableCell>
                 <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {transaction.tags?.map((tag) => (
-                      <Badge key={tag} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
+                  {transaction.isShared && transaction.sharedBy ? (
+                    <Badge variant="secondary">
+                      Shared by: {transaction.sharedBy.name}
+                    </Badge>
+                  ) : null}
                 </TableCell>
                 <TableCell className="flex items-center justify-end gap-1">
                   <Button
@@ -832,20 +730,12 @@ export function TransactionsTable({
                         vendor: transaction.vendor,
                         category: transaction.category,
                         transactionType: transaction.transactionType,
-                        tags: transaction.tags || [],
                       });
                       setIsEditingTransaction(true);
                     }}
                     className="h-8 w-8 p-0">
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  {/* <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleCopyTransaction(transaction)}
-                    className="h-8 w-8 p-0">
-                    <Copy className="h-4 w-4" />
-                  </Button> */}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -1114,73 +1004,6 @@ export function TransactionsTable({
                 </Popover>
               </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="edit-tags" className="text-right text-sm">
-                Tags
-              </label>
-              <div className="col-span-3">
-                <Popover open={openTags} onOpenChange={setOpenTags}>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {(newTransaction.tags || []).map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="flex items-center gap-1">
-                        {tag}
-                        <X
-                          className="h-3 w-3 cursor-pointer"
-                          onClick={() => removeTag(tag)}
-                        />
-                      </Badge>
-                    ))}
-                  </div>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="edit-tags"
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openTags}
-                      aria-label="Select tags"
-                      className="w-[300px] justify-between">
-                      Select responsible person(s)
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0">
-                    <Command>
-                      <CommandInput placeholder="Search tags..." />
-                      <CommandList>
-                        <CommandEmpty>No tags found</CommandEmpty>
-                        <CommandGroup>
-                          {availableTags.map((tag) => {
-                            const isSelected = (
-                              newTransaction.tags || []
-                            ).includes(tag);
-                            return (
-                              <CommandItem
-                                key={tag}
-                                onSelect={() => toggleTag(tag)}
-                                className="flex items-center">
-                                <div
-                                  className={cn(
-                                    "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
-                                    isSelected
-                                      ? "bg-primary border-primary text-primary-foreground"
-                                      : "opacity-50 border-input"
-                                  )}>
-                                  {isSelected && <Check className="h-3 w-3" />}
-                                </div>
-                                {tag}
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
           </div>
           <DialogFooter>
             <Button
@@ -1194,7 +1017,6 @@ export function TransactionsTable({
                   vendor: "",
                   category: "",
                   transactionType: "",
-                  tags: [],
                 });
               }}>
               Cancel

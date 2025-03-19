@@ -1,13 +1,23 @@
 export interface Transaction {
-  id?: string;
+  id: string;
   date: string;
   vendor: string;
   amount: number;
   category: string;
   transactionType: string;
-  tags: string[];
-  userId?: string;
-  sharedWith?: SharedUser[];
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+  user?: {
+    id: string;
+    name?: string;
+    email: string;
+  };
+  isShared?: boolean;
+  sharedBy?: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface SharedUser {
@@ -19,7 +29,7 @@ export interface SharedUser {
 export interface Invitation {
   id?: string;
   email: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: "pending" | "accepted" | "rejected";
   senderId?: string;
   recipientId?: string;
   sender?: SharedUser;
