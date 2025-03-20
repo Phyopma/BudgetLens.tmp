@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +44,7 @@ export function InvitationManager() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("received");
+  const [processingInvitation, setProcessingInvitation] = useState(false);
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -73,30 +80,65 @@ export function InvitationManager() {
     } catch (err) {
       toast({
         title: "Error",
-        description: err instanceof Error ? err.message : "Failed to send invitation",
+        description:
+          err instanceof Error ? err.message : "Failed to send invitation",
         variant: "destructive",
       });
     }
   };
 
-  const handleRespondToInvitation = async (invitationId: string, status: "accepted" | "rejected") => {
+  const handleRespondToInvitation = async (
+    invitationId: string,
+    status: "accepted" | "rejected"
+  ) => {
+    if (processingInvitation) return;
+
     try {
+      setProcessingInvitation(true);
+
       await respondToInvitation(invitationId, status);
+
       toast({
-        title: status === "accepted" ? "Invitation accepted" : "Invitation rejected",
+        title:
+          status === "accepted" ? "Invitation accepted" : "Invitation rejected",
         description:
           status === "accepted"
             ? "You now have access to shared transactions"
             : "Invitation has been rejected",
       });
+
       // Refresh the invitations list
       fetchInvitations(activeTab as "all" | "sent" | "received");
+
+      // If an invitation was accepted, refresh the connections data
+      if (status === "accepted") {
+        // Clear the connections cache by making a request to the API
+        try {
+          await fetch("/api/connections/accepted", {
+            method: "GET",
+            cache: "no-store",
+            headers: {
+              "Cache-Control": "no-cache",
+            },
+          });
+
+          // Refresh the page after a short delay
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } catch (error) {
+          console.error("Error refreshing connections:", error);
+        }
+      }
     } catch (err) {
       toast({
         title: "Error",
-        description: err instanceof Error ? err.message : `Failed to ${status} invitation`,
+        description:
+          err instanceof Error ? err.message : `Failed to ${status} invitation`,
         variant: "destructive",
       });
+    } finally {
+      setProcessingInvitation(false);
     }
   };
 
@@ -134,7 +176,8 @@ export function InvitationManager() {
               <DialogHeader>
                 <DialogTitle>Invite User</DialogTitle>
                 <DialogDescription>
-                  Enter the email address of the person you want to invite to share transactions.
+                  Enter the email address of the person you want to invite to
+                  share transactions.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -160,7 +203,10 @@ export function InvitationManager() {
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="received" value={activeTab} onValueChange={setActiveTab}>
+        <Tabs
+          defaultValue="received"
+          value={activeTab}
+          onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="received">Received</TabsTrigger>
             <TabsTrigger value="sent">Sent</TabsTrigger>
@@ -170,10 +216,13 @@ export function InvitationManager() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchInvitations(activeTab as "all" | "sent" | "received")}
-              disabled={loading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              onClick={() =>
+                fetchInvitations(activeTab as "all" | "sent" | "received")
+              }
+              disabled={loading}>
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
           </div>
@@ -185,21 +234,38 @@ export function InvitationManager() {
               </div>
             ) : error ? (
               <div className="text-center p-6 text-destructive">{error}</div>
-            ) : invitations.filter((invitation) => invitation.email === session?.user?.email || (invitation.recipient && invitation.recipient.email === session?.user?.email)).length === 0 ? (
-              <div className="text-center p-6 text-muted-foreground">No invitations received</div>
+            ) : invitations.filter(
+                (invitation) =>
+                  invitation.email === session?.user?.email ||
+                  (invitation.recipient &&
+                    invitation.recipient.email === session?.user?.email)
+              ).length === 0 ? (
+              <div className="text-center p-6 text-muted-foreground">
+                No invitations received
+              </div>
             ) : (
               invitations
-                .filter((invitation) => invitation.email === session?.user?.email || (invitation.recipient && invitation.recipient.email === session?.user?.email))
+                .filter(
+                  (invitation) =>
+                    invitation.email === session?.user?.email ||
+                    (invitation.recipient &&
+                      invitation.recipient.email === session?.user?.email)
+                )
                 .map((invitation) => (
                   <div
                     key={invitation.id}
-                    className="mb-4 flex items-center justify-between rounded-lg border p-4"
-                  >
+                    className="mb-4 flex items-center justify-between rounded-lg border p-4">
                     <div className="flex items-center space-x-4">
                       <Mail className="h-6 w-6" />
                       <div>
-                        <p className="font-medium">{invitation.sender ? invitation.sender.email : 'Unknown sender'}</p>
-                        <p className="text-sm text-gray-500">{getStatusBadge(invitation.status)}</p>
+                        <p className="font-medium">
+                          {invitation.sender
+                            ? invitation.sender.email
+                            : "Unknown sender"}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {getStatusBadge(invitation.status)}
+                        </p>
                       </div>
                     </div>
                     {invitation.status === "pending" && (
@@ -207,16 +273,18 @@ export function InvitationManager() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleRespondToInvitation(invitation.id, "accepted")}
-                        >
+                          onClick={() =>
+                            handleRespondToInvitation(invitation.id, "accepted")
+                          }>
                           <Check className="mr-2 h-4 w-4" />
                           Accept
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleRespondToInvitation(invitation.id, "rejected")}
-                        >
+                          onClick={() =>
+                            handleRespondToInvitation(invitation.id, "rejected")
+                          }>
                           <X className="mr-2 h-4 w-4" />
                           Reject
                         </Button>
@@ -234,21 +302,26 @@ export function InvitationManager() {
               </div>
             ) : error ? (
               <div className="text-center p-6 text-destructive">{error}</div>
-            ) : invitations.filter((invitation) => invitation.senderId === userId).length === 0 ? (
-              <div className="text-center p-6 text-muted-foreground">No invitations sent</div>
+            ) : invitations.filter(
+                (invitation) => invitation.senderId === userId
+              ).length === 0 ? (
+              <div className="text-center p-6 text-muted-foreground">
+                No invitations sent
+              </div>
             ) : (
               invitations
                 .filter((invitation) => invitation.senderId === userId)
                 .map((invitation) => (
                   <div
                     key={invitation.id}
-                    className="mb-4 flex items-center justify-between rounded-lg border p-4"
-                  >
+                    className="mb-4 flex items-center justify-between rounded-lg border p-4">
                     <div className="flex items-center space-x-4">
                       <Mail className="h-6 w-6" />
                       <div>
                         <p className="font-medium">{invitation.email}</p>
-                        <p className="text-sm text-gray-500">{getStatusBadge(invitation.status)}</p>
+                        <p className="text-sm text-gray-500">
+                          {getStatusBadge(invitation.status)}
+                        </p>
                       </div>
                     </div>
                   </div>

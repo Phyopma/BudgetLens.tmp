@@ -49,6 +49,7 @@ export default function Home() {
     updateTransaction,
     deleteTransaction,
     importTransactions,
+    shareTransaction, // Make sure this is being destructured from useTransactions
   } = useTransactions();
 
   const [filteredTransactions, setFilteredTransactions] = useState<
@@ -207,11 +208,26 @@ export default function Home() {
     oldTransaction: Transaction,
     newTransaction: Transaction
   ) => {
-    updateTransaction(oldTransaction, newTransaction);
+    updateTransaction({ ...oldTransaction, ...newTransaction });
   };
 
-  const handleDeleteTransaction = (transactionToDelete: Transaction) => {
-    deleteTransaction(transactionToDelete);
+  const handleDeleteTransaction = (transaction: Transaction) => {
+    deleteTransaction(transaction);
+  };
+
+  // Add the missing share transaction handler
+  const handleShareTransaction = (
+    transaction: Transaction,
+    userIds: string[]
+  ) => {
+    console.log("Sharing transaction with users:", userIds);
+    shareTransaction(transaction, userIds)
+      .then(() => {
+        console.log("Transaction shared successfully");
+      })
+      .catch((error) => {
+        console.error("Error sharing transaction:", error);
+      });
   };
 
   const handleCategoryFilter = (includes: string[], excludes: string[]) =>
@@ -329,6 +345,7 @@ export default function Home() {
               onAddTransaction={handleAddTransaction}
               onUpdateTransaction={handleUpdateTransaction}
               onDeleteTransaction={handleDeleteTransaction}
+              onShareTransaction={handleShareTransaction} // Add the missing prop
             />
           </div>
         );

@@ -1,29 +1,32 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Invitation } from '@/lib/types';
+import { useState, useCallback, useEffect } from "react";
+import { Invitation } from "@/lib/types";
 
 export const useInvitations = () => {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchInvitations = useCallback(async (type: 'all' | 'sent' | 'received' = 'all') => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/invitations?type=${type}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch invitations');
+  const fetchInvitations = useCallback(
+    async (type: "all" | "sent" | "received" = "all") => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/invitations?type=${type}`);
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch invitations");
+        }
+
+        const data = await response.json();
+        setInvitations(data);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
       }
-      
-      const data = await response.json();
-      setInvitations(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   // Initial fetch
   useEffect(() => {
@@ -34,15 +37,15 @@ export const useInvitations = () => {
   const sendInvitation = async (email: string) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/invitations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to send invitation');
+        throw new Error(errorData.error || "Failed to send invitation");
       }
 
       const newInvitation = await response.json();
@@ -50,19 +53,29 @@ export const useInvitations = () => {
       setError(null);
       return newInvitation;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send invitation');
+      setError(
+        err instanceof Error ? err.message : "Failed to send invitation"
+      );
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  const respondToInvitation = async (invitationId: string, status: 'accepted' | 'rejected') => {
+  const respondToInvitation = async (
+    invitationId: string,
+    status: "accepted" | "rejected"
+  ) => {
     try {
       setLoading(true);
+
+      console.log(
+        `Responding to invitation ${invitationId} with status: ${status}`
+      );
+
       const response = await fetch(`/api/invitations/${invitationId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
 
@@ -72,16 +85,20 @@ export const useInvitations = () => {
       }
 
       const updatedInvitation = await response.json();
-      
+
+      console.log("Updated invitation:", updatedInvitation);
+
       // Update the invitation in the state
       setInvitations((prev) =>
         prev.map((inv) => (inv.id === invitationId ? updatedInvitation : inv))
       );
-      
+
       setError(null);
       return updatedInvitation;
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to ${status} invitation`);
+      setError(
+        err instanceof Error ? err.message : `Failed to ${status} invitation`
+      );
       throw err;
     } finally {
       setLoading(false);

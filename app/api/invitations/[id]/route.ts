@@ -25,10 +25,20 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
+    console.log(`Processing invitation ${invitationId} with status: ${status}`);
+
     // Find the invitation
     const invitation = await prisma.invitation.findUnique({
       where: { id: invitationId },
-      include: { sender: true },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
 
     if (!invitation) {
@@ -67,25 +77,53 @@ export async function PATCH(
             email: true,
           },
         },
+        recipient: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     });
 
+    console.log(`Invitation updated: ${JSON.stringify(updatedInvitation)}`);
+
     // If the invitation is accepted, share the sender's transactions with the recipient
     if (status === "accepted") {
-      // Get all transactions from the sender
-      const senderTransactions = await prisma.transaction.findMany({
-        where: { userId: invitation.senderId },
-      });
+      try {
+        console.log(
+          `Sharing transactions from ${invitation.senderId} to ${userId}`
+        );
 
-      // Create SharedTransaction records for each transaction
-      for (const transaction of senderTransactions) {
-        await prisma.sharedTransaction.create({
-          data: {
-            transactionId: transaction.id,
-            sharedById: invitation.senderId,
-            sharedWithId: userId,
-          },
+        // Get all transactions from the sender
+        const senderTransactions = await prisma.transaction.findMany({
+          where: { userId: invitation.senderId },
         });
+
+        console.log(`Found ${senderTransactions.length} transactions to share`);
+
+        // Create SharedTransaction records for each transaction
+        if (senderTransactions.length > 0) {
+          // Use createMany with skipDuplicates to handle the unique constraint
+          const sharedTransactionsData = senderTransactions.map(
+            (transaction) => ({
+              transactionId: transaction.id,
+              sharedById: invitation.senderId,
+              sharedWithId: userId,
+            })
+          );
+
+          const result = await prisma.sharedTransaction.createMany({
+            data: sharedTransactionsData,
+            skipDuplicates: true, // Skip records that would violate the unique constraint
+          });
+
+          console.log(`Created ${result.count} shared transaction records`);
+        }
+      } catch (error) {
+        console.error("Error sharing transactions:", error);
+        // Continue with the invitation acceptance even if sharing fails
       }
     }
 

@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
+import * as bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
@@ -36,36 +37,175 @@ const SAMPLE_DATA = `date,vendor,amount,category,transactionType
 
 async function seedDatabase() {
   try {
-    // Clear existing transactions
+    // Clear existing data
+    await prisma.sharedTransaction.deleteMany();
+    await prisma.invitation.deleteMany();
+    await prisma.accountBalance.deleteMany();
+    await prisma.bankAccount.deleteMany();
     await prisma.transaction.deleteMany();
+    await prisma.session.deleteMany();
+    await prisma.account.deleteMany();
+    await prisma.user.deleteMany();
 
-    // Parse and insert sample data
-    const lines = SAMPLE_DATA.trim().split('\n');
-    const transactions = lines.slice(1).map(line => {
-      const [date, vendor, amount, category, transactionType] = line.split(',').map(item => item.trim());
+    // Create test users
+    const hashedPassword = await bcrypt.hash("password123", 10);
+
+    const mainUser = await prisma.user.create({
+      data: {
+        name: "Test User",
+        email: "test@example.com",
+        password: hashedPassword,
+      },
+    });
+
+    const secondUser = await prisma.user.create({
+      data: {
+        name: "Connected User",
+        email: "connected@example.com",
+        password: hashedPassword,
+      },
+    });
+
+    const thirdUser = await prisma.user.create({
+      data: {
+        name: "Another User",
+        email: "another@example.com",
+        password: hashedPassword,
+      },
+    });
+
+    // Create accepted invitation between users
+    await prisma.invitation.create({
+      data: {
+        email: secondUser.email,
+        status: "accepted",
+        senderId: mainUser.id,
+        recipientId: secondUser.id,
+      },
+    });
+
+    await prisma.invitation.create({
+      data: {
+        email: thirdUser.email,
+        status: "accepted",
+        senderId: mainUser.id,
+        recipientId: thirdUser.id,
+      },
+    });
+
+    // Create bank accounts for main user
+    const checkingAccount = await prisma.bankAccount.create({
+      data: {
+        name: "Primary Checking",
+        accountType: "Checking",
+        bankName: "Example Bank",
+        accountNumber: "123456789",
+        userId: mainUser.id,
+      },
+    });
+
+    const savingsAccount = await prisma.bankAccount.create({
+      data: {
+        name: "Savings Account",
+        accountType: "Savings",
+        bankName: "Example Bank",
+        accountNumber: "987654321",
+        userId: mainUser.id,
+      },
+    });
+
+    // Create account balances
+    await prisma.accountBalance.create({
+      data: {
+        accountId: checkingAccount.id,
+        balance: 2500.0,
+        userId: mainUser.id,
+      },
+    });
+
+    await prisma.accountBalance.create({
+      data: {
+        accountId: savingsAccount.id,
+        balance: 5000.0,
+        userId: mainUser.id,
+      },
+    });
+
+    // Parse and insert sample transactions for main user
+    const lines = SAMPLE_DATA.trim().split("\n");
+    const transactions = lines.slice(1).map((line) => {
+      const [date, vendor, amount, category, transactionType] = line
+        .split(",")
+        .map((item) => item.trim());
       return {
         date,
         vendor,
         amount: parseFloat(amount),
         category,
-        transactionType
+        transactionType,
+        userId: mainUser.id, // Make sure userId is always included
       };
     });
 
-    // Insert transactions
-    await prisma.transaction.createMany({
-      data: transactions
+    // Insert transactions in batches to avoid too many records
+    const transactionChunks = [];
+    for (let i = 0; i < transactions.length; i += 10) {
+      transactionChunks.push(transactions.slice(i, i + 10));
+    }
+
+    for (const chunk of transactionChunks) {
+      // Ensure each transaction has userId
+      const chunkWithUserIds = chunk.map((tx) => ({
+        ...tx,
+        userId: mainUser.id, // Explicitly set userId for each transaction
+      }));
+
+      const result = await prisma.transaction.createMany({
+        data: chunkWithUserIds,
+      });
+      console.log(`Created ${result.count} transactions`);
+    }
+
+    // Create some shared transactions
+    const allTransactions = await prisma.transaction.findMany({
+      where: { userId: mainUser.id },
+      take: 5, // Share the first 5 transactions
     });
 
-    console.log('Database seeded successfully');
+    // Share with second user
+    for (const transaction of allTransactions.slice(0, 3)) {
+      await prisma.sharedTransaction.create({
+        data: {
+          transactionId: transaction.id,
+          sharedById: mainUser.id,
+          sharedWithId: secondUser.id,
+        },
+      });
+    }
+
+    // Share with third user
+    for (const transaction of allTransactions.slice(2, 5)) {
+      await prisma.sharedTransaction.create({
+        data: {
+          transactionId: transaction.id,
+          sharedById: mainUser.id,
+          sharedWithId: thirdUser.id,
+        },
+      });
+    }
+
+    console.log("Database seeded successfully");
   } catch (error) {
-    console.error('Error seeding database:', error);
-    process.exit(1);
+    console.error("Error seeding database:", error);
+    throw error;
   } finally {
     await prisma.$disconnect();
   }
 }
 
-seedDatabase();
+seedDatabase().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
 
 export default seedDatabase;

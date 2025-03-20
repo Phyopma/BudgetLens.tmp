@@ -1,3 +1,16 @@
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  isConnected?: boolean;
+}
+
+export interface SharedUser {
+  id: string;
+  name?: string;
+  email: string;
+}
+
 export interface Transaction {
   id: string;
   date: string;
@@ -18,12 +31,7 @@ export interface Transaction {
     id: string;
     name: string;
   };
-}
-
-export interface SharedUser {
-  id: string;
-  name?: string;
-  email: string;
+  sharedWith?: SharedUser[];
 }
 
 export interface Invitation {

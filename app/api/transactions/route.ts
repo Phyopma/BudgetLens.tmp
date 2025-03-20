@@ -106,8 +106,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = session.user.id as string;
-    const { searchParams } = new URL(request.url);
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email as string },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const userId = user.id;
+    const searchParams = request.nextUrl.searchParams;
 
     const category = searchParams.get("category");
     const vendor = searchParams.get("vendor");

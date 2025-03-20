@@ -67,7 +67,9 @@ export const parseCSV = (csvContent: string): Transaction[] => {
   return filterDuplicateTransfers(transactions);
 };
 
-export const filterDuplicateTransfers = (transactions) => {
+export const filterDuplicateTransfers = (
+  transactions: Transaction[]
+): Transaction[] => {
   // Separate transactions by category.
   const nonTransfers = transactions.filter(
     (tx) => tx.category.toLowerCase() !== "transfer"
@@ -77,7 +79,7 @@ export const filterDuplicateTransfers = (transactions) => {
   );
 
   // We'll mark transfer transactions that have a complementary match for removal.
-  const removedIndices = new Set();
+  const removedIndices = new Set<number>();
 
   // Compare each transfer with every other to find complementary pairs.
   for (let i = 0; i < transfers.length; i++) {
