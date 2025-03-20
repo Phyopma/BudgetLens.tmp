@@ -42,7 +42,18 @@ export const useTransactions = () => {
 
       const data = await response.json();
 
-      // Enhance transaction data with shared information
+      // Collect IDs of transactions that need shared info
+      const transactionsNeedingSharedInfo = data
+        .filter(
+          (tx: any) =>
+            // Find transactions that are owned by the user and don't have sharedWith info
+            !tx.sharedBy &&
+            (!tx.sharedWith || tx.sharedWith.length === 0) &&
+            tx.id
+        )
+        .map((tx: any) => tx.id);
+
+      // Process the initial transaction data
       const processedData = data.map((transaction: any) => {
         // For transactions others have shared with the current user
         if (transaction.sharedBy) {
@@ -52,49 +63,31 @@ export const useTransactions = () => {
           };
         }
 
-        // For the user's own transactions, fetch the users they've shared with
-        if (!transaction.sharedWith) {
-          // If transaction doesn't have sharedWith info, try to get it if transaction id exists
-          if (transaction.id) {
-            // We want to modify this in a separate fetch to avoid blocking the UI
-            fetchSharedWithUsers(transaction.id)
-              .then((users) => {
-                if (users && users.length > 0) {
-                  setTransactions((prev) =>
-                    prev.map((t) =>
-                      t.id === transaction.id
-                        ? { ...t, sharedWith: users, isShared: true }
-                        : t
-                    )
-                  );
-                }
-              })
-              .catch((err) => {
-                console.error(
-                  "Error fetching shared users for transaction:",
-                  err
-                );
-              });
-          }
+        // For transactions that already have sharedWith data
+        if (transaction.sharedWith && transaction.sharedWith.length > 0) {
           return {
             ...transaction,
-            sharedWith: [],
+            isShared: true,
+            sharedWith: Array.isArray(transaction.sharedWith)
+              ? transaction.sharedWith
+              : [transaction.sharedWith],
           };
         }
 
-        // If transaction already has sharedWith data, make sure it's an array
+        // For transactions that don't have sharing info yet
         return {
           ...transaction,
-          isShared: transaction.sharedWith?.length > 0,
-          sharedWith: Array.isArray(transaction.sharedWith)
-            ? transaction.sharedWith
-            : transaction.sharedWith
-            ? [transaction.sharedWith]
-            : [],
+          sharedWith: [],
         };
       });
 
       setTransactions(processedData);
+
+      // If we have transactions that need shared info, fetch it in one batch
+      if (transactionsNeedingSharedInfo.length > 0) {
+        fetchSharedUsersForMultipleTransactions(transactionsNeedingSharedInfo);
+      }
+
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -103,18 +96,44 @@ export const useTransactions = () => {
     }
   };
 
-  // Helper function to fetch users a transaction is shared with
-  const fetchSharedWithUsers = async (transactionId: string) => {
+  // New batch method to fetch shared users for multiple transactions
+  const fetchSharedUsersForMultipleTransactions = async (
+    transactionIds: string[]
+  ) => {
     try {
-      const response = await fetch(
-        `/api/transactions/${transactionId}/shared-with`
+      if (!transactionIds.length) return;
+
+      const response = await fetch("/api/transactions/shared-with/batch", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ transactionIds }),
+      });
+
+      if (!response.ok) {
+        console.error("Failed to fetch shared users in batch");
+        return;
+      }
+
+      const { sharedUsers } = await response.json();
+
+      // Update transactions in state with sharing information
+      setTransactions((prev) =>
+        prev.map((transaction) => {
+          const sharedWithUsers = sharedUsers[transaction.id];
+          if (sharedWithUsers && sharedWithUsers.length > 0) {
+            return {
+              ...transaction,
+              sharedWith: sharedWithUsers,
+              isShared: true,
+            };
+          }
+          return transaction;
+        })
       );
-      if (!response.ok) throw new Error("Failed to fetch shared users");
-      const data = await response.json();
-      return data.users || [];
     } catch (error) {
-      console.error("Error fetching shared users:", error);
-      return [];
+      console.error("Error fetching shared users in batch:", error);
     }
   };
 

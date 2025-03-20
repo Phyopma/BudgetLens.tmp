@@ -160,7 +160,6 @@ export function InvitationManager() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Transaction Sharing</CardTitle>
             <CardDescription>
               Invite others to share transactions or view your invitations
             </CardDescription>

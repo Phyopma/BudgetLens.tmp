@@ -7,49 +7,56 @@ import { authOptions } from "../auth/[...nextauth]/route";
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the authenticated user's session
     const session = await getServerSession(authOptions);
-
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { accountId, balance } = await request.json();
+
+    if (!accountId || balance === undefined) {
+      return NextResponse.json(
+        { error: "Account ID and balance are required" },
+        { status: 400 }
+      );
+    }
+
     const userId = session.user.id as string;
-    const accountBalanceData = await request.json();
 
     // Verify the account belongs to the user
     const account = await prisma.bankAccount.findUnique({
-      where: {
-        id: accountBalanceData.accountId,
-        userId: userId,
-      },
+      where: { id: accountId },
+      select: { userId: true },
     });
 
     if (!account) {
+      return NextResponse.json({ error: "Account not found" }, { status: 404 });
+    }
+
+    if (account.userId !== userId) {
       return NextResponse.json(
-        { error: "Account not found or unauthorized" },
+        { error: "Unauthorized to modify this account" },
         { status: 403 }
       );
     }
 
+    // Create the account balance record
     const accountBalance = await prisma.accountBalance.create({
       data: {
-        ...accountBalanceData,
-        userId: userId,
+        accountId,
+        balance: parseFloat(balance.toString()),
+        userId,
       },
     });
 
-    // Update the latest balance on the bank account
-    await prisma.bankAccount.update({
-      where: { id: accountBalanceData.accountId },
-      data: { latestBalance: accountBalanceData.balance },
-    });
+    // NOTE: Don't update latestBalance directly on bankAccount since it's not a field in the schema
+    // Instead, the frontend should calculate this from the account balance records
 
     return NextResponse.json(accountBalance);
   } catch (error) {
     console.error("Error creating account balance:", error);
     return NextResponse.json(
-      { error: "Error creating account balance" },
+      { error: "Failed to create account balance" },
       { status: 500 }
     );
   }

@@ -293,7 +293,46 @@ export function TransactionsTable({
       );
 
       try {
-        onShareTransaction(transactionToShare, selectedUserIds);
+        onShareTransaction(transactionToShare, selectedUserIds)
+          .then((updatedTransaction) => {
+            console.log("Transaction shared successfully:", updatedTransaction);
+
+            // Create properly formatted user objects for consistent UI
+            const selectedUsers = selectedUserIds.map((id) => {
+              const foundUser = users.find((u) => u.id === id);
+              return {
+                id: id,
+                name: foundUser?.name || "",
+                email: foundUser?.email || "",
+              };
+            });
+
+            // Ensure the local state update matches exactly what the backend would return
+            setTransactions((prev) =>
+              prev.map((t) => {
+                if (t.id === transactionToShare.id) {
+                  // Create a consistent structure - same as what API would return on refresh
+                  return {
+                    ...t,
+                    isShared: true,
+                    sharedWith: [
+                      ...(t.sharedWith || []),
+                      ...selectedUsers.filter(
+                        (newUser) =>
+                          !t.sharedWith?.some(
+                            (existing) => existing.id === newUser.id
+                          )
+                      ),
+                    ],
+                  };
+                }
+                return t;
+              })
+            );
+          })
+          .catch((error) => {
+            console.error("Error in handleShareTransaction:", error);
+          });
       } catch (error) {
         console.error("Error in handleShareTransaction:", error);
       } finally {
@@ -961,26 +1000,43 @@ export function TransactionsTable({
                 <TableCell>{transaction.transactionType}</TableCell>
                 <TableCell>
                   {transaction.isShared && transaction.sharedBy ? (
-                    // Transaction shared by others to current user
-                    <Badge variant="secondary">
-                      Shared by: {transaction.sharedBy.name}
-                    </Badge>
+                    // Transaction shared by others to current user - avatar only with "by" color
+                    <div className="flex items-center">
+                      <div
+                        className="h-7 w-7 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center ring-2 ring-background"
+                        title={`Shared by ${transaction.sharedBy.name}`}>
+                        <span className="text-xs font-medium">
+                          {transaction.sharedBy.name?.charAt(0) || "?"}
+                        </span>
+                      </div>
+                    </div>
                   ) : transaction.isShared ||
                     (transaction.sharedWith &&
                       transaction.sharedWith.length > 0) ? (
-                    // Transaction shared by current user to others
-                    <div>
-                      <Badge variant="outline" className="mb-1">
-                        Shared with {transaction.sharedWith?.length || 0} user
-                        {(transaction.sharedWith?.length || 0) > 1 ? "s" : ""}
-                      </Badge>
-                      <div className="text-xs text-muted-foreground max-h-16 overflow-y-auto">
-                        {transaction.sharedWith?.map(
-                          (user: any, index: number) => (
-                            <div key={user.id || index} className="truncate">
-                              {user.name || user.email || "Unknown user"}
+                    // Transaction shared by current user to others - avatar(s) with "with" color
+                    <div className="relative">
+                      <div className="flex -space-x-2 overflow-hidden">
+                        {/* Show first 3 user avatars with "with" color */}
+                        {transaction.sharedWith
+                          ?.slice(0, 3)
+                          .map((user: any, idx: number) => (
+                            <div
+                              key={user.id || idx}
+                              className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center ring-2 ring-background"
+                              title={`Shared with ${user.name || user.email}`}>
+                              <span className="text-xs font-medium">
+                                {user.name?.charAt(0) ||
+                                  user.email?.charAt(0) ||
+                                  "?"}
+                              </span>
                             </div>
-                          )
+                          ))}
+
+                        {/* If more than 3 users, show count */}
+                        {(transaction.sharedWith?.length || 0) > 3 && (
+                          <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs ring-2 ring-background">
+                            +{(transaction.sharedWith?.length || 0) - 3}
+                          </div>
                         )}
                       </div>
                     </div>

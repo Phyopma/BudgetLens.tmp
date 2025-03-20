@@ -179,7 +179,21 @@ export function AccountBalanceCards({ className }: AccountBalanceCardsProps) {
       if (isEditMode && editingAccount) {
         await updateBankAccount(editingAccount, accountFormData);
       } else {
-        await addBankAccount(accountFormData);
+        // When creating a new account, if the user provided an initial balance
+        const newAccount = await addBankAccount(accountFormData);
+
+        // If we successfully created the account, immediately add a balance of 0
+        // This ensures the latestBalance property will be available
+        if (newAccount && newAccount.id) {
+          try {
+            await addAccountBalance(newAccount.id, 0);
+          } catch (err) {
+            console.error(
+              "Failed to set initial balance for new account:",
+              err
+            );
+          }
+        }
       }
       setAccountDialogOpen(false);
       fetchBankAccounts();
@@ -321,7 +335,7 @@ export function AccountBalanceCards({ className }: AccountBalanceCardsProps) {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatCurrency(account.latestBalance || 0)}
+                  {formatCurrency(account.balances[0].balance)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {account.bankName}{" "}
@@ -337,7 +351,7 @@ export function AccountBalanceCards({ className }: AccountBalanceCardsProps) {
                     variant="ghost"
                     size="sm"
                     className="h-8 w-8 p-0"
-                    onClick={() => handleOpenBalanceDialog("add")}>
+                    onClick={() => handleOpenBalanceDialog("add", account.id)}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>

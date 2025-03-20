@@ -44,9 +44,9 @@ export function FilterBar({
   onTransactionTypeFilter,
   onDateFilter,
 }: FilterBarProps) {
-  const [categoryStates, setCategoryStates] = useState<SelectionStates>({});
-  const [vendorStates, setVendorStates] = useState<SelectionStates>({});
-  const [typeStates, setTypeStates] = useState<SelectionStates>({});
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [dateRange, setDateRange] = useState<{ min: Date; max: Date }>(() => {
@@ -111,47 +111,60 @@ export function FilterBar({
     }
   };
 
-  const handleStateChange =
-    (
-      states: SelectionStates,
-      setStates: (states: SelectionStates) => void,
-      onFilter: (includes: string[], excludes: string[]) => void
-    ) =>
-    (value: string, state: 0 | 1 | 2) => {
-      const newStates = { ...states };
-      newStates[value] = state;
-
-      setStates(newStates);
-
-      const includes = Object.entries(newStates)
-        .filter(([_, state]) => state === 1)
-        .map(([value]) => value);
-      const excludes = Object.entries(newStates)
-        .filter(([_, state]) => state === 2)
-        .map(([value]) => value);
-
-      onFilter(includes, excludes);
-    };
-
-  const isAllSelected = (states: SelectionStates, items: string[]) => {
-    return items.every((item) => states[item] === 1);
+  const getDisplayValue = (
+    selected: string[],
+    defaultLabel: string
+  ): string => {
+    if (selected.length === 0) return "all"; // Use "all" when nothing is selected
+    return selected[0]; // Otherwise use the first selected item
   };
 
-  const toggleAll = (
-    states: SelectionStates,
-    setStates: (states: SelectionStates) => void,
-    items: string[],
-    onFilter: (includes: string[], excludes: string[]) => void
-  ) => {
-    const allSelected = isAllSelected(states, items);
-    const newStates: SelectionStates = {};
+  const handleCategoryChange = (value: string) => {
+    if (value === "all") {
+      // Clear the filter
+      setSelectedCategories([]);
+      onCategoryFilter([]);
+    } else if (value === "reset") {
+      // Clear the filter
+      setSelectedCategories([]);
+      onCategoryFilter([]);
+    } else {
+      // Apply the filter
+      setSelectedCategories([value]);
+      onCategoryFilter([value]);
+    }
+  };
 
-    items.forEach((item) => {
-      newStates[item] = allSelected ? 0 : 1;
-    });
+  const handleVendorChange = (value: string) => {
+    if (value === "all") {
+      // Clear the filter
+      setSelectedVendors([]);
+      onVendorFilter([]);
+    } else if (value === "reset") {
+      // Clear the filter
+      setSelectedVendors([]);
+      onVendorFilter([]);
+    } else {
+      // Apply the filter
+      setSelectedVendors([value]);
+      onVendorFilter([value]);
+    }
+  };
 
-    setStates(newStates);
-    onFilter(allSelected ? [] : items, []);
+  const handleTypeChange = (value: string) => {
+    if (value === "all") {
+      // Clear the filter
+      setSelectedTypes([]);
+      onTransactionTypeFilter([]);
+    } else if (value === "reset") {
+      // Clear the filter
+      setSelectedTypes([]);
+      onTransactionTypeFilter([]);
+    } else {
+      // Apply the filter
+      setSelectedTypes([value]);
+      onTransactionTypeFilter([value]);
+    }
   };
 
   return (
@@ -221,103 +234,80 @@ export function FilterBar({
         )}
       </div>
 
-      <Select value="category" onValueChange={() => {}}>
+      <Select
+        value={getDisplayValue(selectedCategories, "category")}
+        onValueChange={handleCategoryChange}>
         <SelectTrigger className="w-[180px]" aria-label="Filter by Category">
-          <SelectValue>Filter by Category</SelectValue>
+          <SelectValue>
+            {selectedCategories.length > 0
+              ? selectedCategories[0]
+              : "All Categories"}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem
-            value="__all__"
-            selectionState={isAllSelected(categoryStates, categories) ? 1 : 0}
-            onMultiStateChange={() =>
-              toggleAll(
-                categoryStates,
-                setCategoryStates,
-                categories,
-                onCategoryFilter
-              )
-            }>
-            Select All
-          </SelectItem>
+          <SelectItem value="all">All Categories</SelectItem>
           <SelectSeparator />
           {categories.map((category) => (
-            <SelectItem
-              key={category}
-              value={category}
-              selectionState={categoryStates[category] || 0}
-              onMultiStateChange={handleStateChange(
-                categoryStates,
-                setCategoryStates,
-                onCategoryFilter
-              )}>
+            <SelectItem key={category} value={category}>
               {category}
             </SelectItem>
           ))}
+          {selectedCategories.length > 0 && (
+            <>
+              <SelectSeparator />
+              <SelectItem value="reset">Clear Filter</SelectItem>
+            </>
+          )}
         </SelectContent>
       </Select>
 
-      <Select value="vendor" onValueChange={() => {}}>
+      <Select
+        value={getDisplayValue(selectedVendors, "vendor")}
+        onValueChange={handleVendorChange}>
         <SelectTrigger className="w-[180px]" aria-label="Filter by Vendor">
-          <SelectValue>Filter by Vendor</SelectValue>
+          <SelectValue>
+            {selectedVendors.length > 0 ? selectedVendors[0] : "All Vendors"}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem
-            value="__all__"
-            selectionState={isAllSelected(vendorStates, vendors) ? 1 : 0}
-            onMultiStateChange={() =>
-              toggleAll(vendorStates, setVendorStates, vendors, onVendorFilter)
-            }>
-            Select All
-          </SelectItem>
+          <SelectItem value="all">All Vendors</SelectItem>
           <SelectSeparator />
           {vendors.map((vendor) => (
-            <SelectItem
-              key={vendor}
-              value={vendor}
-              selectionState={vendorStates[vendor] || 0}
-              onMultiStateChange={handleStateChange(
-                vendorStates,
-                setVendorStates,
-                onVendorFilter
-              )}>
+            <SelectItem key={vendor} value={vendor}>
               {vendor}
             </SelectItem>
           ))}
+          {selectedVendors.length > 0 && (
+            <>
+              <SelectSeparator />
+              <SelectItem value="reset">Clear Filter</SelectItem>
+            </>
+          )}
         </SelectContent>
       </Select>
 
-      <Select value="type" onValueChange={() => {}}>
+      <Select
+        value={getDisplayValue(selectedTypes, "type")}
+        onValueChange={handleTypeChange}>
         <SelectTrigger className="w-[180px]" aria-label="Filter by Type">
-          <SelectValue>Filter by Type</SelectValue>
+          <SelectValue>
+            {selectedTypes.length > 0 ? selectedTypes[0] : "All Types"}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem
-            value="__all__"
-            selectionState={isAllSelected(typeStates, transactionTypes) ? 1 : 0}
-            onMultiStateChange={() =>
-              toggleAll(
-                typeStates,
-                setTypeStates,
-                transactionTypes,
-                onTransactionTypeFilter
-              )
-            }>
-            Select All
-          </SelectItem>
+          <SelectItem value="all">All Types</SelectItem>
           <SelectSeparator />
           {transactionTypes.map((type) => (
-            <SelectItem
-              key={type}
-              value={type}
-              selectionState={typeStates[type] || 0}
-              onMultiStateChange={handleStateChange(
-                typeStates,
-                setTypeStates,
-                onTransactionTypeFilter
-              )}>
+            <SelectItem key={type} value={type}>
               {type}
             </SelectItem>
           ))}
+          {selectedTypes.length > 0 && (
+            <>
+              <SelectSeparator />
+              <SelectItem value="reset">Clear Filter</SelectItem>
+            </>
+          )}
         </SelectContent>
       </Select>
     </div>

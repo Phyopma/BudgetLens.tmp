@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InvitationManager } from "./InvitationManager";
 import { Switch } from "@/components/ui/switch";
@@ -24,21 +30,18 @@ export function TransactionSharing({ className }: TransactionSharingProps) {
   return (
     <div className={className}>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Transaction Sharing</h2>
-        <div className="flex items-center space-x-2">
+        <h2 className="text-2xl font-semibold">Transaction Sharing</h2>
+        {/* <div className="flex items-center space-x-2">
           <Switch
             id="include-shared"
             checked={includeShared}
             onCheckedChange={handleToggleShared}
           />
           <Label htmlFor="include-shared">Include shared transactions</Label>
-        </div>
+        </div> */}
       </div>
 
       <Tabs defaultValue="invitations" className="w-full">
-        <TabsList className="grid w-full grid-cols-1">
-          <TabsTrigger value="invitations">Invitations</TabsTrigger>
-        </TabsList>
         <TabsContent value="invitations">
           <InvitationManager />
         </TabsContent>
