@@ -72,6 +72,7 @@ model Transaction {
   user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   sharedWith      SharedTransaction[]
 
+  @@unique([userId, date, vendor, amount, transactionType], name: "unique_transaction")
   @@index([date])
   @@index([category])
   @@index([vendor])

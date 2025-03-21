@@ -10,7 +10,17 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 
 interface CSVUploadProps {
-  onUpload: (content: string) => Promise<void>;
+  onUpload: (content: string) => Promise<{
+    created: number;
+    skipped: number;
+    total: number;
+  }>;
+}
+
+interface UploadResult {
+  created: number;
+  skipped: number;
+  total: number;
 }
 
 export function CSVUpload({ onUpload }: CSVUploadProps) {
@@ -18,12 +28,14 @@ export function CSVUpload({ onUpload }: CSVUploadProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [result, setResult] = useState<UploadResult | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
       setError(null);
       setSuccess(false);
+      setResult(null);
     }
   };
 
@@ -36,11 +48,13 @@ export function CSVUpload({ onUpload }: CSVUploadProps) {
     setLoading(true);
     setError(null);
     setSuccess(false);
+    setResult(null);
 
     try {
       const content = await file.text();
-      await onUpload(content);
+      const result = await onUpload(content);
       setSuccess(true);
+      setResult(result);
       setFile(null);
       if (document.getElementById("csv-upload") as HTMLInputElement) {
         (document.getElementById("csv-upload") as HTMLInputElement).value = "";
@@ -95,11 +109,17 @@ export function CSVUpload({ onUpload }: CSVUploadProps) {
         </Alert>
       )}
 
-      {success && (
+      {success && result && (
         <Alert variant="default" className="bg-green-50 border-green-200">
           <AlertTitle>Success</AlertTitle>
           <AlertDescription>
-            Transactions imported successfully!
+            <p>Imported {result.total} transactions:</p>
+            <ul className="list-disc pl-5 mt-2">
+              <li>{result.created} transactions added</li>
+              {result.skipped > 0 && (
+                <li>{result.skipped} transactions skipped (duplicates)</li>
+              )}
+            </ul>
           </AlertDescription>
         </Alert>
       )}

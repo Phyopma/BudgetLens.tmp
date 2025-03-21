@@ -38,6 +38,29 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Check for duplicate transaction
+      const existingTransaction = await prisma.transaction.findFirst({
+        where: {
+          userId: userId,
+          date: transactionData.date,
+          vendor: transactionData.vendor,
+          amount: transactionData.amount ?? 0,
+          transactionType: transactionData.transactionType,
+        },
+      });
+
+      // If duplicate exists, return conflict status
+      if (existingTransaction) {
+        return NextResponse.json(
+          {
+            error:
+              "Duplicate transaction: A transaction with the same date, vendor, amount, and type already exists",
+            duplicateId: existingTransaction.id,
+          },
+          { status: 409 }
+        );
+      }
+
       const transaction = await prisma.transaction.create({
         data: {
           ...transactionData,
@@ -52,6 +75,29 @@ export async function POST(request: NextRequest) {
     // Ensure each transaction has all required fields
     const processedTransactions = [];
 
+    // First, fetch existing transactions for this user to check for duplicates
+    const existingTransactions = await prisma.transaction.findMany({
+      where: {
+        userId: userId,
+      },
+      select: {
+        date: true,
+        vendor: true,
+        amount: true,
+        transactionType: true,
+      },
+    });
+
+    // Create a lookup Set with composite keys for fast duplicate checking
+    const existingTransactionKeys = new Set(
+      existingTransactions.map(
+        (tx) =>
+          `${tx.date}|${tx.vendor}|${tx.amount ?? 0}|${tx.transactionType}`
+      )
+    );
+
+    const skippedTransactions = [];
+
     for (const transaction of transactions) {
       const { tags, ...transactionData } = transaction;
 
@@ -65,15 +111,33 @@ export async function POST(request: NextRequest) {
         continue; // Skip invalid transactions
       }
 
+      // Create composite key for duplicate checking
+      const transactionKey = `${transactionData.date}|${
+        transactionData.vendor
+      }|${transactionData.amount ?? 0}|${transactionData.transactionType}`;
+
+      // Check if this transaction already exists
+      if (existingTransactionKeys.has(transactionKey)) {
+        skippedTransactions.push(transactionData);
+        continue; // Skip this transaction
+      }
+
+      // Add to processed transactions for creation
       processedTransactions.push({
         ...transactionData,
         amount: transactionData.amount ?? 0,
         userId: userId,
       });
+
+      // Add to our lookup set so we don't create duplicates within the same batch
+      existingTransactionKeys.add(transactionKey);
     }
 
     // If no valid transactions were found, return an error
-    if (processedTransactions.length === 0) {
+    if (
+      processedTransactions.length === 0 &&
+      skippedTransactions.length === 0
+    ) {
       return NextResponse.json(
         {
           error:
@@ -84,12 +148,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the valid transactions
-    const createdTransactions = await prisma.transaction.createMany({
-      data: processedTransactions,
-      skipDuplicates: true,
-    });
+    let createdTransactions;
+    if (processedTransactions.length > 0) {
+      createdTransactions = await prisma.transaction.createMany({
+        data: processedTransactions,
+        skipDuplicates: true,
+      });
+    } else {
+      createdTransactions = { count: 0 };
+    }
 
-    return NextResponse.json(createdTransactions);
+    return NextResponse.json({
+      created: createdTransactions.count,
+      skipped: skippedTransactions.length,
+      total: processedTransactions.length + skippedTransactions.length,
+    });
   } catch (error) {
     console.error("Error creating transaction(s):", error);
     return NextResponse.json(
