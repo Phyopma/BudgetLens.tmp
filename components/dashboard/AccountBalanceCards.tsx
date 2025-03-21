@@ -335,7 +335,9 @@ export function AccountBalanceCards({ className }: AccountBalanceCardsProps) {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatCurrency(account.balances[0].balance)}
+                  {formatCurrency(
+                    account.balances ? account.balances[0].balance : 0
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {account.bankName}{" "}
