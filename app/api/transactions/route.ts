@@ -233,7 +233,7 @@ export async function GET(request: NextRequest) {
     });
 
     // If includeShared is true, also get transactions shared with the user
-    let sharedTransactions = [];
+    let sharedTransactions: any[] = [];
     if (includeShared) {
       // Build the where clause for shared transactions - ensure no tags filter
       const sharedWhere: any = {};
@@ -264,7 +264,7 @@ export async function GET(request: NextRequest) {
           where: {
             ...sharedWhere,
             id: {
-              in: sharedTransactionIds.map((st) => st.transactionId),
+              in: sharedTransactionIds.map((st: any) => st.transactionId),
             },
           },
           orderBy: { date: "desc" },
@@ -331,15 +331,18 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const transaction = await request.json();
-    // Remove tags property if it exists
-    const { tags, ...transactionData } = transaction;
+    const data = await request.json();
+    // Use a type assertion to handle potential tags property
+    const { tags, ...transactionData } = data as {
+      tags?: any;
+      [key: string]: any;
+    };
 
     const userId = session.user.id as string;
 
     // Verify the user owns this transaction
     const existingTransaction = await prisma.transaction.findUnique({
-      where: { id: transaction.id },
+      where: { id: transactionData.id },
       select: { userId: true },
     });
 
@@ -357,8 +360,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Ensure we only pass valid transaction properties to Prisma
     const updatedTransaction = await prisma.transaction.update({
-      where: { id: transaction.id },
+      where: { id: transactionData.id },
       data: transactionData,
     });
 

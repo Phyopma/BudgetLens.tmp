@@ -3,11 +3,10 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload } from "lucide-react";
+import { Upload, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info } from "lucide-react";
 
 interface CSVUploadProps {
   onUpload: (content: string) => Promise<{
@@ -30,9 +29,28 @@ export function CSVUpload({ onUpload }: CSVUploadProps) {
   const [success, setSuccess] = useState(false);
   const [result, setResult] = useState<UploadResult | null>(null);
 
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles && acceptedFiles.length > 0) {
+      setFile(acceptedFiles[0]);
+      setError(null);
+      setSuccess(false);
+      setResult(null);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "text/csv": [".csv"],
+    },
+    maxFiles: 1,
+    multiple: false,
+  });
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setFile(files[0]);
       setError(null);
       setSuccess(false);
       setResult(null);
@@ -56,8 +74,13 @@ export function CSVUpload({ onUpload }: CSVUploadProps) {
       setSuccess(true);
       setResult(result);
       setFile(null);
-      if (document.getElementById("csv-upload") as HTMLInputElement) {
-        (document.getElementById("csv-upload") as HTMLInputElement).value = "";
+
+      // Reset the file input
+      const fileInput = document.getElementById(
+        "csv-upload"
+      ) as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = "";
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to upload CSV");
@@ -67,7 +90,9 @@ export function CSVUpload({ onUpload }: CSVUploadProps) {
   };
 
   return (
-    <div className="p-6 border rounded-lg space-y-4">
+    <div
+      className="p-6 border rounded-lg space-y-4"
+      data-testid="csv-upload-component">
       <h2 className="text-2xl font-semibold mb-4">Import Transactions</h2>
 
       <Alert className="mb-4">
@@ -82,35 +107,49 @@ export function CSVUpload({ onUpload }: CSVUploadProps) {
         </AlertDescription>
       </Alert>
 
-      <div className="space-y-2">
-        <Label htmlFor="csv-upload" className="text-sm font-medium">
-          Upload CSV File
-        </Label>
-        <input
-          id="csv-upload"
-          type="file"
-          accept=".csv"
-          onChange={handleFileChange}
-          className="w-full cursor-pointer rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
-        />
+      <div
+        {...getRootProps()}
+        className={`border-2 border-dashed rounded-md p-6 cursor-pointer transition-colors ${
+          isDragActive
+            ? "border-primary bg-primary/5"
+            : "border-muted-foreground/20"
+        }`}>
+        <input {...getInputProps({ id: "csv-upload" })} />
+        <div className="flex flex-col items-center justify-center text-center space-y-2">
+          <Upload className="h-8 w-8 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            {isDragActive
+              ? "Drop the CSV file here"
+              : "Drag & drop a CSV file here, or click to select a file"}
+          </p>
+          {file && (
+            <p className="text-sm font-medium text-primary">
+              Selected: {file.name}
+            </p>
+          )}
+        </div>
       </div>
 
       <Button
         onClick={handleUpload}
         disabled={!file || loading}
-        className="w-full">
+        className="w-full"
+        data-testid="upload-button">
         {loading ? "Uploading..." : "Upload and Import"}
       </Button>
 
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" data-testid="error-alert">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {success && result && (
-        <Alert variant="default" className="bg-green-50 border-green-200">
+        <Alert
+          variant="default"
+          className="bg-green-50 border-green-200"
+          data-testid="success-alert">
           <AlertTitle>Success</AlertTitle>
           <AlertDescription>
             <p>Imported {result.total} transactions:</p>
