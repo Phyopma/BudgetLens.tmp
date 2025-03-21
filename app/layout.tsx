@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import './globals.css';
-import { Inter } from 'next/font/google';
-import { ThemeProvider } from "@/components/theme-provider"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { AuthProvider } from "@/contexts/AuthContext"
-import { SessionProvider } from "next-auth/react"
-import { LogoutButton } from "@/components/ui/LogoutButton"
+import "./globals.css";
+import { Inter } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { SessionProvider } from "next-auth/react";
+import { LogoutButton } from "@/components/ui/LogoutButton";
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({
   children,
@@ -24,8 +24,7 @@ export default function RootLayout({
               attribute="class"
               defaultTheme="system"
               enableSystem
-              disableTransitionOnChange
-            >
+              disableTransitionOnChange>
               <div className="absolute right-4 top-4">
                 <ThemeToggle />
               </div>
